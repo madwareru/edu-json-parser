@@ -6,9 +6,7 @@ use std::collections::HashMap;
 use combine::{parser, eof};
 use combine::parser::range::{take_while1};
 use combine::parser::char::*;
-use combine::{Parser, many, optional, many1, token, skip_many, skip_many1, sep_by, between};
-use std::convert::TryFrom;
-use combine::stream::easy;
+use combine::{Parser, many, optional, many1, skip_many, sep_by, between};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -19,6 +17,62 @@ pub enum Node
     String(String),
     Array(Vec<Box<Node>>),
     Dictionary(HashMap<String, Box<Node>>)
+}
+
+impl Node {
+    pub fn is_null(&self) -> bool {
+        *self == Node::Null
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        if let Node::Boolean(b) = self {
+            Some(*b)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_number(&self) -> Option<f64> {
+        if let Node::Number(n) = self {
+            Some(*n)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_string(&self) -> Option<String> {
+        if let Node::String(s) = self {
+            Some(s.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn as_array(&self) -> Option<&Vec<Box<Node>>> {
+        if let Node::Array(v) = self {
+            Some(&v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_dictionary(&self) -> Option<&HashMap<String, Box<Node>>> {
+        if let Node::Dictionary(d) = self {
+            Some(&d)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_element_at(&self, idx: usize) -> Option<Box<Node>> {
+        let arr = self.as_array();
+        arr.map(|a| a[idx].clone())
+    }
+
+    pub fn get(&self, key: &str) -> Option<Box<Node>> {
+        let dict = self.as_dictionary();
+        dict.map(|d| d[key].clone())
+    }
 }
 
 fn word_part<'a>() -> impl Parser<&'a str, Output = &'a str> {
@@ -93,7 +147,7 @@ fn bool_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 
 fn null_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
     c_hx_do!{
-        word <- string("null");
+        _word <- string("null");
         Box::new(Node::Null)
     }
 }
@@ -234,15 +288,11 @@ mod tests {
         assert_eq!(None, parse_json(&z));
 
         let z = String::from("[1, false, \"say\"]");
-        assert_eq!(
-            Some(Box::new(Node::Array(
-                vec![
-                    Box::new(Node::Number(1.0)),
-                    Box::new(Node::Boolean(false)),
-                    Box::new(Node::String("say".to_string())),
-                ]
-            ))),
-            parse_json(&z));
+        let arr = *parse_json(&z).unwrap();
+        assert_eq!(Some(3), arr.as_array().map(|a| a.len()));
+        assert_eq!(Some(Box::new(Node::Number(1.0))), arr.get_element_at(0));
+        assert_eq!(Some(Box::new(Node::Boolean(false))), arr.get_element_at(1));
+        assert_eq!(Some(Box::new(Node::String("say".to_string()))), arr.get_element_at(2));
 
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
@@ -263,14 +313,9 @@ mod tests {
 
         let z = String::from("{\"number\": 1, \"bool\": false, \"string\": \"say\"}");
         let dict = *(parse_json(&z).unwrap());
-        match dict {
-            Node::Dictionary(dictionary) => {
-                assert_eq!(Box::new(Node::Number(1.0)), dictionary["number"]);
-                assert_eq!(Box::new(Node::Boolean(false)), dictionary["bool"]);
-                assert_eq!(Box::new(Node::String("say".to_string())), dictionary["string"]);
-            },
-            _ => assert_eq!(2, 3)
-        }
+        assert_eq!(Some(Box::new(Node::Number(1.0))), dict.get("number"));
+        assert_eq!(Some(Box::new(Node::Boolean(false))), dict.get("bool"));
+        assert_eq!(Some(Box::new(Node::String("say".to_string()))), dict.get("string"));
 
         let z = String::from("null");
         assert_eq!(Some(Box::new(Node::Null)), parse_json(&z));
