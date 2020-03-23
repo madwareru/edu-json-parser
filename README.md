@@ -1,2 +1,3 @@
 # edu-json-parser
-Educational pet project supposed to help with a parser combinator knowledge
+Self-educational pet project.
+JSON parser made with a help `combine` parser combinator library
