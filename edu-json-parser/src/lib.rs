@@ -34,14 +34,23 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<&'a str>> {
 }
 
 fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
-    c_hx_do! {
-        __ <- char('"'),
-        x  <- string_part().skip(char('"'));
+    c_monadde! {
+        char('"') => __ |>
+        string_part().skip(char('"')) => x |>
         x.iter().fold(
             String::new(),
             |mut acc, s| { acc.push_str(s); acc }
         )
     }
+
+    // c_hx_do! {
+    //     __ <- char('"'),
+    //     x  <- string_part().skip(char('"'));
+    //     x.iter().fold(
+    //         String::new(),
+    //         |mut acc, s| { acc.push_str(s); acc }
+    //     )
+    // }
 }
 
 fn string_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
