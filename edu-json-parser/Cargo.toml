@@ -1,0 +1,11 @@
+[package]
+name = "edu-json-parser"
+version = "0.1.0"
+authors = ["madwareru <madware.ru@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+combine = "4.0.1"
+compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.1" }
