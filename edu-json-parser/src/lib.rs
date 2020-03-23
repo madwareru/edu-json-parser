@@ -221,6 +221,9 @@ mod tests {
         let z = String::from("123.767");
         assert_eq!(Node::Number(123.767), *parse_json(&z).unwrap());
 
+        let z = String::from("123.767f");
+        assert_eq!(None, parse_json(&z));
+
         let z = String::from("true");
         assert_eq!(Node::Boolean(true), *parse_json(&z).unwrap());
 
