@@ -36,7 +36,8 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<&'a str>> {
 fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
     c_hx_do! {
         __ <- char('"'),
-        x  <- string_part().skip(char('"'));
+        x  <- string_part(),
+        ___ <- char('"');
         x.iter().fold(
             String::new(),
             |mut acc, s| { acc.push_str(s); acc }
@@ -49,7 +50,13 @@ fn string_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 }
 
 fn digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
-    many1(digit()).map(|x: Vec<char>| x.iter().fold(String::new(), |mut acc, c| { acc.push(*c); acc} ))
+    many1(digit()).map(
+        |x: Vec<char>|
+        x.iter().fold(
+            String::new(),
+            |mut acc, c| { acc.push(*c); acc}
+        )
+    )
 }
 
 fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
@@ -102,7 +109,12 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
         dictionary_parser().parse_stream(input).into_result()
     });
 
-    let possible_parser = bool_parser().or(number_parser()).or(string_parser()).or(null_parser()).or(recursive_array_parser).or(recursive_dict_parser);
+    let possible_parser = bool_parser()
+        .or(number_parser())
+        .or(string_parser())
+        .or(null_parser())
+        .or(recursive_array_parser)
+        .or(recursive_dict_parser);
 
     c_hx_do! {
         __ <- skip_many(space()),
@@ -114,8 +126,8 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 
 fn array_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
     between(
-        char('[').skip(skip_many(space())),
-        skip_many(space()).with(char(']')),
+        c_compre![c; c <- char('['), __ <- skip_many(space())],
+        c_compre![c; __ <- skip_many(space()), c <- char(']')],
         optional(sep_by(primitive_parser(), char(',')))
     ).map(
         |nodes_opt: Option<Vec<Box<Node>>>| nodes_opt.map(
@@ -125,22 +137,25 @@ fn array_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 }
 
 fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Box<Node>)> {
-    let many_space1 = skip_many(space());
-    let many_space2 = skip_many(space());
+    let str_parser = c_hx_do!{
+        __ <- skip_many(space()),
+        stp <- string_parser_inner(),
+        ___ <- skip_many(space());
+        stp
+    };
 
-    let lhs = many_space1
-        .with(string_parser_inner())
-        .skip(many_space2);
-
-    let rhs = primitive_parser();
-
-    lhs.skip(char(':')).and(rhs)
+    c_hx_do!{
+        l <- str_parser,
+        __ <- char(':'),
+        r <- primitive_parser();
+        (l, r)
+    }
 }
 
 fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
     between(
-        char('{').skip(skip_many(space())),
-        skip_many(space()).with(char('}')),
+        c_compre![c; c <- char('{'), __ <- skip_many(space())],
+        c_compre![c; __ <- skip_many(space()), c <- char('}')],
         optional(sep_by(pair_parser(), char(',')))
     ).map(
         |nodes_opt: Option<Vec<(String, Box<Node>)>>| nodes_opt.map(
@@ -170,7 +185,12 @@ fn json_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 }
 
 pub fn parse_json(content: &str) -> Option<Box<Node>> {
-    json_parser().skip(eof()).parse(content).map(|(res,_)| res).ok()
+    let mut parser = c_hx_do!{
+        json <- json_parser(),
+        __ <- eof();
+        json
+    };
+    parser.parse(content).map(|(res,_)| res).ok()
 }
 
 #[cfg(test)]
