@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 combine = "4.0.1"
-compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.3" }
+compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.4" }

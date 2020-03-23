@@ -18,8 +18,8 @@ dependencies = [
 
 [[package]]
 name = "compre_combinee"
-version = "0.1.3"
-source = "git+https://github.com/madwareru/compre_combinee#ee0a67207c181272558383bb1c2538761a6bfaf2"
+version = "0.1.4"
+source = "git+https://github.com/madwareru/compre_combinee#f30c708adf34bf2942210cf2c020e372c5537569"
 dependencies = [
  "proc_monadde_macro_combinee",
 ]
@@ -40,5 +40,5 @@ checksum = "3728d817d99e5ac407411fa471ff9800a778d88a24685968b36824eaf4bee400"
 
 [[package]]
 name = "proc_monadde_macro_combinee"
-version = "0.1.3"
-source = "git+https://github.com/madwareru/proc_monadde_macro_combinee#9674e705341b87999f2aed802b661b1512897543"
+version = "0.1.4"
+source = "git+https://github.com/madwareru/proc_monadde_macro_combinee#ec7d28aa2c4025c19456664b755074c05b4f0290"

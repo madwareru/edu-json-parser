@@ -34,23 +34,14 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<&'a str>> {
 }
 
 fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
-    c_monadde! {
-        char('"') => __ |>
-        string_part().skip(char('"')) => x |>
+    c_hx_do! {
+        __ <- char('"'),
+        x  <- string_part().skip(char('"'));
         x.iter().fold(
             String::new(),
             |mut acc, s| { acc.push_str(s); acc }
         )
     }
-
-    // c_hx_do! {
-    //     __ <- char('"'),
-    //     x  <- string_part().skip(char('"'));
-    //     x.iter().fold(
-    //         String::new(),
-    //         |mut acc, s| { acc.push_str(s); acc }
-    //     )
-    // }
 }
 
 fn string_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
@@ -101,9 +92,6 @@ fn null_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 }
 
 fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
-    let many_space1 = skip_many(space());
-    let many_space2 = skip_many(space());
-
     let recursive_array_parser = parser(|input| {
         let _: &mut &str = input;
         array_parser().parse_stream(input).into_result()
@@ -114,14 +102,14 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
         dictionary_parser().parse_stream(input).into_result()
     });
 
-    many_space1
-    .with(bool_parser()
-        .or(number_parser())
-        .or(string_parser())
-        .or(null_parser())
-        .or(recursive_array_parser)
-        .or(recursive_dict_parser))
-    .skip(many_space2)
+    let possible_parser = bool_parser().or(number_parser()).or(string_parser()).or(null_parser()).or(recursive_array_parser).or(recursive_dict_parser);
+
+    c_hx_do! {
+        __ <- skip_many(space()),
+        pars <- possible_parser,
+        ___ <- skip_many(space());
+        pars
+    }
 }
 
 fn array_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
