@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use combine::{parser, eof};
 use combine::parser::range::{take_while1};
 use combine::parser::char::*;
-use combine::{Parser, many, optional, many1, skip_many, sep_by, between};
+use combine::{Parser, many, optional, skip_many, sep_by, between};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -92,10 +92,14 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
         __ <- char('"'),
         x  <- string_part(),
         ___ <- char('"');
-        x.iter().fold(
-            String::new(),
-            |mut acc, s| { acc.push_str(s); acc }
-        )
+        {
+            let cap = x.iter().fold(0, |acc, s| acc + s.len());
+            let mut str = String::with_capacity(cap);
+            for s in x.iter() {
+                str.push_str(s);
+            }
+            str
+        }
     }
 }
 
@@ -104,13 +108,7 @@ fn string_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 }
 
 fn digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
-    many1(digit()).map(
-        |x: Vec<char>|
-        x.iter().fold(
-            String::new(),
-            |mut acc, c| { acc.push(*c); acc}
-        )
-    )
+    take_while1(|c: char| c >= '0' && c <= '9').map(|x| String::from(x))
 }
 
 fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
@@ -238,13 +236,17 @@ fn json_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
         .or(dictionary_parser())
 }
 
-pub fn parse_json(content: &str) -> Option<Box<Node>> {
+pub fn parse_json(content: &str) -> Result<Box<Node>, String> {
     let mut parser = c_hx_do!{
         json <- json_parser(),
         __ <- eof();
         json
     };
-    parser.parse(content).map(|(res,_)| res).ok()
+    let res = parser.parse(content);
+    match res {
+        Err(x) => Err(format!("{}", x.to_string())),
+        Ok((res,_)) => Ok(res)
+    }
 }
 
 #[cfg(test)]
@@ -257,11 +259,8 @@ mod tests {
         let x = parse_json("\"lol\"");
         assert_eq!(Node::String("lol".to_string()), *x.unwrap());
 
-        let x = parse_json("\"lol");
-        assert_eq!(None, x);
-
         let x = parse_json("\"lol, \\\"it's nested\\\"\"");
-        assert_eq!(Some(Box::new(Node::String("lol, \\\"it's nested\\\"".to_string()))), x);
+        assert_eq!(Ok(Box::new(Node::String("lol, \\\"it's nested\\\"".to_string()))), x);
 
         let s = String::from(r#""who let the dogs out?""#);
         assert_eq!(Node::String("who let the dogs out?".to_string()), *parse_json(&s).unwrap());
@@ -276,7 +275,7 @@ mod tests {
         assert_eq!(Node::Number(123.767), *parse_json(&z).unwrap());
 
         let z = String::from("123.767f");
-        assert_eq!(None, parse_json(&z));
+        assert!(if let Err(_) = parse_json(&z){true}else{false});
 
         let z = String::from("true");
         assert_eq!(Node::Boolean(true), *parse_json(&z).unwrap());
@@ -285,7 +284,7 @@ mod tests {
         assert_eq!(Node::Boolean(false), *parse_json(&z).unwrap());
 
         let z = String::from("falshe");
-        assert_eq!(None, parse_json(&z));
+        assert!(if let Err(_) = parse_json(&z){true}else{false});
 
         let z = String::from("[1, false, \"say\"]");
         let arr = *parse_json(&z).unwrap();
@@ -296,7 +295,7 @@ mod tests {
 
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
-            Some(Box::new(Node::Array(
+            Ok(Box::new(Node::Array(
                 vec![
                     Box::new(Node::Number(1.0)),
                     Box::new(Node::Array(
@@ -318,12 +317,12 @@ mod tests {
         assert_eq!(Some(Box::new(Node::String("say".to_string()))), dict.get("string"));
 
         let z = String::from("null");
-        assert_eq!(Some(Box::new(Node::Null)), parse_json(&z));
+        assert_eq!(Ok(Box::new(Node::Null)), parse_json(&z));
         let z = String::from("[]");
-        assert_eq!(Some(Box::new(Node::Array(vec![]))), parse_json(&z));
+        assert_eq!(Ok(Box::new(Node::Array(vec![]))), parse_json(&z));
         let z = String::from("{}");
-        assert_eq!(Some(Box::new(Node::Dictionary(HashMap::new()))), parse_json(&z));
+        assert_eq!(Ok(Box::new(Node::Dictionary(HashMap::new()))), parse_json(&z));
         let z = String::from("{}abra");
-        assert_eq!(None, parse_json(&z));
+        assert!(if let Err(_) = parse_json(&z){ true } else { false });
     }
 }
