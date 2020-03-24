@@ -7,6 +7,7 @@ use combine::{parser, eof};
 use combine::parser::range::{take_while1};
 use combine::parser::char::*;
 use combine::{Parser, many, optional, skip_many, sep_by, between};
+use std::ops::Index;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -56,12 +57,31 @@ impl Node {
         }
     }
 
+    pub fn is_array(&self) -> bool {
+        self.as_array().map(|_| true).unwrap_or(false)
+    }
+
     pub fn as_dictionary(&self) -> Option<&HashMap<String, Box<Node>>> {
         if let Node::Dictionary(d) = self {
             Some(&d)
         } else {
             None
         }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Node::Null => None,
+            Node::Boolean(_) => None,
+            Node::Number(_) => None,
+            Node::String(_) => None,
+            Node::Array(v) => Some(v.len()),
+            Node::Dictionary(d) => Some(d.len()),
+        }.expect("it appears that node is not array or dictionary so it has no len!")
+    }
+
+    pub fn is_dictionary(&self) -> bool {
+        self.as_dictionary().map(|_| true).unwrap_or(false)
     }
 
     pub fn get_element_at(&self, idx: usize) -> Option<Box<Node>> {
@@ -82,6 +102,38 @@ impl Node {
         } else {
             None
         }
+    }
+
+    pub fn get_string(&self, key: &str) -> Option<String> {
+        self.get(key).map(|s| s.as_string()).unwrap_or(None)
+    }
+
+    pub fn get_number(&self, key: &str) -> Option<f64> {
+        self.get(key).map(|s| s.as_number()).unwrap_or(None)
+    }
+
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
+        self.get(key).map(|s| s.as_bool()).unwrap_or(None)
+    }
+}
+
+impl Index<&str> for Node
+{
+    type Output = Box<Node>;
+    fn index(&self, key: &str) -> &Self::Output {
+        self.as_dictionary()
+            .map(|v| &v[key])
+            .expect("trying to use non-dictionary node as dictionary")
+    }
+}
+
+impl Index<usize> for Node
+{
+    type Output = Box<Node>;
+    fn index(&self, key: usize) -> &Self::Output {
+        self.as_array()
+            .map(|v| &v[key])
+            .expect("trying to use non-array node as dictionary")
     }
 }
 
