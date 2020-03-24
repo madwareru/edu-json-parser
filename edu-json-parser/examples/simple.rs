@@ -1,4 +1,4 @@
-use edu_json_parser::parse_json;
+use edu_json_parser::{parse_json};
 
 fn parse_card(card: &str) {
     println!("My card is:\n{}\n", card);
@@ -7,31 +7,45 @@ fn parse_card(card: &str) {
         Ok(json_data) => {
             println!(
                 "My name: {}",
-                json_data
-                    .get_string("name")
-                    .unwrap_or("it appears that I don't have a name!".to_string())
+                match json_data.get_string("name") {
+                    Ok(s) => s,
+                    Err(cause) => format!(
+                        "it appears that I don't have a name! To be precisely, {}",
+                        cause.to_string()
+                    ),
+                }
             );
             println!(
                 "My last_name: {}",
-                json_data
-                    .get_string("last_name")
-                    .unwrap_or("it appears that I don't have a last_name!".to_string())
+                match json_data.get_string("last_name") {
+                    Ok(s) => s,
+                    Err(cause) => format!(
+                        "it appears that I don't have a last_name! To be precisely, {}",
+                        cause.to_string()
+                    ),
+                }
             );
             println!(
                 "My age: {}",
-                json_data
-                    .get_number("age")
-                    .map(|n| n.to_string())
-                    .unwrap_or("it appears that I don't have an age!".to_string())
+                match json_data.get_number("age").map(|n| n.to_string()) {
+                    Ok(s) => s,
+                    Err(cause) => format!(
+                        "it appears that I don't have an age! To be precisely, {}",
+                        cause.to_string()
+                    ),
+                }
             );
             println!(
                 "My weight: {}",
-                json_data
-                    .get_number("weight")
-                    .map(|n| n.to_string())
-                    .unwrap_or("it appears that I don't have an weight!".to_string())
+                match json_data.get_number("weight").map(|n| n.to_string()) {
+                    Ok(s) => s,
+                    Err(cause) => format!(
+                        "it appears that I don't have an weight! To be precisely, {}",
+                        cause.to_string()
+                    ),
+                }
             );
-            if let Some(sizes) = json_data.get("sizes") {
+            if let Ok(sizes) = json_data.get("sizes") {
                 if sizes.is_array() {
                     if sizes.len() != 3 {
                         println!("Something wrong with sizes, they must be exactly 3 in length")

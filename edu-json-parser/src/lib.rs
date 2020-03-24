@@ -8,6 +8,7 @@ use combine::parser::range::{take_while1};
 use combine::parser::char::*;
 use combine::{Parser, many, optional, skip_many, sep_by, between};
 use std::ops::Index;
+use crate::ErrorCause::{NodeIsNotArray, IndexOutOfBound, NodeIsNotDictionary, ItemNotExist};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -18,6 +19,27 @@ pub enum Node
     String(String),
     Array(Vec<Box<Node>>),
     Dictionary(HashMap<String, Box<Node>>)
+}
+
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum ErrorCause {
+    ItemNotExist,
+    WrongTypeRequested,
+    IndexOutOfBound,
+    NodeIsNotArray,
+    NodeIsNotDictionary
+}
+
+impl ToString for ErrorCause {
+    fn to_string(&self) -> String {
+        match self {
+            ErrorCause::ItemNotExist => "Item not exist".to_string(),
+            ErrorCause::WrongTypeRequested => "Wrong type requested".to_string(),
+            IndexOutOfBound => "Index is out of bounds".to_string(),
+            NodeIsNotArray => "Node is not an array".to_string(),
+            NodeIsNotDictionary => "Node is not a dictionary".to_string(),
+        }
+    }
 }
 
 impl Node {
@@ -33,6 +55,14 @@ impl Node {
         }
     }
 
+    pub fn is_bool(&self) -> bool {
+        if let Node::Boolean(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn as_number(&self) -> Option<f64> {
         if let Node::Number(n) = self {
             Some(*n)
@@ -41,11 +71,27 @@ impl Node {
         }
     }
 
+    pub fn is_number(&self) -> bool {
+        if let Node::String(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn as_string(&self) -> Option<String> {
         if let Node::String(s) = self {
             Some(s.clone())
         } else {
             None
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        if let Node::String(_) = self {
+            true
+        } else {
+            false
         }
     }
 
@@ -69,6 +115,10 @@ impl Node {
         }
     }
 
+    pub fn is_dictionary(&self) -> bool {
+        self.as_dictionary().map(|_| true).unwrap_or(false)
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Node::Null => None,
@@ -80,40 +130,57 @@ impl Node {
         }.expect("it appears that node is not array or dictionary so it has no len!")
     }
 
-    pub fn is_dictionary(&self) -> bool {
-        self.as_dictionary().map(|_| true).unwrap_or(false)
-    }
-
-    pub fn get_element_at(&self, idx: usize) -> Option<Box<Node>> {
+    pub fn get_element_at(&self, idx: usize) -> Result<Box<Node>, ErrorCause> {
         if let Some(arr) = self.as_array() {
             if idx <= arr.len() {
-                Some(arr[idx].clone())
+                Ok(arr[idx].clone())
             } else {
-                None
+                Err(IndexOutOfBound)
             }
         } else {
-            None
+            Err(NodeIsNotArray)
         }
     }
 
-    pub fn get(&self, key: &str) -> Option<Box<Node>> {
+    pub fn get(&self, key: &str) -> Result<Box<Node>, ErrorCause> {
         if let Some(dict) = self.as_dictionary() {
-            dict.get(key).map(|x| x.clone())
+            match dict.get(key).map(|x| x.clone()) {
+                None => Err(ItemNotExist),
+                Some(x) => Ok(x),
+            }
         } else {
-            None
+            Err(NodeIsNotDictionary)
         }
     }
 
-    pub fn get_string(&self, key: &str) -> Option<String> {
-        self.get(key).map(|s| s.as_string()).unwrap_or(None)
+    pub fn get_string(&self, key: &str) -> Result<String, ErrorCause> {
+        match self.get(key) {
+            Err(e) => Err(e),
+            Ok(node) => match node.as_string() {
+                None => Err(ErrorCause::WrongTypeRequested),
+                Some(data) => Ok(data),
+            },
+        }
     }
 
-    pub fn get_number(&self, key: &str) -> Option<f64> {
-        self.get(key).map(|s| s.as_number()).unwrap_or(None)
+    pub fn get_number(&self, key: &str) -> Result<f64, ErrorCause> {
+        match self.get(key) {
+            Err(e) => Err(e),
+            Ok(node) => match node.as_number() {
+                None => Err(ErrorCause::WrongTypeRequested),
+                Some(data) => Ok(data),
+            },
+        }
     }
 
-    pub fn get_bool(&self, key: &str) -> Option<bool> {
-        self.get(key).map(|s| s.as_bool()).unwrap_or(None)
+    pub fn get_bool(&self, key: &str) -> Result<bool, ErrorCause> {
+        match self.get(key) {
+            Err(e) => Err(e),
+            Ok(node) => match node.as_bool() {
+                None => Err(ErrorCause::WrongTypeRequested),
+                Some(data) => Ok(data),
+            },
+        }
     }
 }
 
@@ -351,9 +418,9 @@ mod tests {
         let z = String::from("[1, false, \"say\"]");
         let arr = *parse_json(&z).unwrap();
         assert_eq!(Some(3), arr.as_array().map(|a| a.len()));
-        assert_eq!(Some(Box::new(Node::Number(1.0))), arr.get_element_at(0));
-        assert_eq!(Some(Box::new(Node::Boolean(false))), arr.get_element_at(1));
-        assert_eq!(Some(Box::new(Node::String("say".to_string()))), arr.get_element_at(2));
+        assert_eq!(Ok(Box::new(Node::Number(1.0))), arr.get_element_at(0));
+        assert_eq!(Ok(Box::new(Node::Boolean(false))), arr.get_element_at(1));
+        assert_eq!(Ok(Box::new(Node::String("say".to_string()))), arr.get_element_at(2));
 
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
@@ -374,9 +441,9 @@ mod tests {
 
         let z = String::from("{\"number\": 1, \"bool\": false, \"string\": \"say\"}");
         let dict = *(parse_json(&z).unwrap());
-        assert_eq!(Some(Box::new(Node::Number(1.0))), dict.get("number"));
-        assert_eq!(Some(Box::new(Node::Boolean(false))), dict.get("bool"));
-        assert_eq!(Some(Box::new(Node::String("say".to_string()))), dict.get("string"));
+        assert_eq!(Ok(Box::new(Node::Number(1.0))), dict.get("number"));
+        assert_eq!(Ok(Box::new(Node::Boolean(false))), dict.get("bool"));
+        assert_eq!(Ok(Box::new(Node::String("say".to_string()))), dict.get("string"));
 
         let z = String::from("null");
         assert_eq!(Ok(Box::new(Node::Null)), parse_json(&z));
