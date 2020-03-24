@@ -85,7 +85,7 @@ const CARDS: [&'static str; 11] = [
     r#"{"name": "S", "last_name": "Expr", "age": "(99)", "weight": "(150)"}"#,
     // ^^^ this is tricky. get_as_string() would do too well and get string data where it shouldn't,
     // so this is where we should say "hey, get_as_string should return error when it sees a string"
-    // this is why this method has such strange semantic
+    // this is why this method has such strange semantic, so yeah, I'm not so stupid here
     "[]",
     "{}",
     "null",
