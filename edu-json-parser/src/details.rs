@@ -52,10 +52,16 @@ impl Node {
     }
 
     pub fn as_string(&self) -> Option<String> {
-        if let Node::String(s) = self {
-            Some(s.clone())
-        } else {
-            None
+        match self {
+            // this is arguable but we are sometimes in need
+            // to read something which is not string as string
+            // so it might be a good idea to let user just do it
+            Node::Null => Some("null".to_string()),
+            Node::Boolean(b) => Some(b.to_string()),
+            Node::Number(n) => Some(n.to_string()),
+            Node::String(s) => Some(s.clone()),
+            Node::Array(_) => None,
+            Node::Dictionary(_) => None,
         }
     }
 
@@ -126,6 +132,16 @@ impl Node {
     }
 
     pub fn get_string(&self, key: &str) -> Result<String, ErrorCause> {
+        match self.get(key) {
+            Err(e) => Err(e),
+            Ok(node) => match *node {
+                Node::String(s) => Ok(s),
+                _ => Err(ErrorCause::WrongTypeRequested)
+            },
+        }
+    }
+
+    pub fn get_as_string(&self, key: &str) -> Result<String, ErrorCause> {
         match self.get(key) {
             Err(e) => Err(e),
             Ok(node) => match node.as_string() {
