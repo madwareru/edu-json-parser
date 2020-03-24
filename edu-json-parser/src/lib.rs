@@ -65,13 +65,23 @@ impl Node {
     }
 
     pub fn get_element_at(&self, idx: usize) -> Option<Box<Node>> {
-        let arr = self.as_array();
-        arr.map(|a| a[idx].clone())
+        if let Some(arr) = self.as_array() {
+            if idx <= arr.len() {
+                Some(arr[idx].clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     pub fn get(&self, key: &str) -> Option<Box<Node>> {
-        let dict = self.as_dictionary();
-        dict.map(|d| d[key].clone())
+        if let Some(dict) = self.as_dictionary() {
+            dict.get(key).map(|x| x.clone())
+        } else {
+            None
+        }
     }
 }
 
