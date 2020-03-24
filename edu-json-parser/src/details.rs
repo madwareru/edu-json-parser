@@ -53,15 +53,23 @@ impl Node {
 
     pub fn as_string(&self) -> Option<String> {
         match self {
-            // this is arguable but we are sometimes in need
-            // to read something which is not string as string
-            // so it might be a good idea to let user just do it
+            Node::String(s) => Some(s.clone()),
+            _ => None
+        }
+    }
+
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            // we are sometimes finding a need to read something which is not string as a string
+            // so it might be a good idea to give user an appropriate method
             Node::Null => Some("null".to_string()),
             Node::Boolean(b) => Some(b.to_string()),
             Node::Number(n) => Some(n.to_string()),
-            Node::String(s) => Some(s.clone()),
-            Node::Array(_) => None,
-            Node::Dictionary(_) => None,
+            _ => None,
+            // ^^^ yeah, it strange that we ignoring string too, but it makes sense,
+            // as well as we already have a `as_string()` method. Doing the same thing
+            // here would lead to some strange bugs anyway. For details, take a look at
+            // example `simple.rs`
         }
     }
 
@@ -134,8 +142,8 @@ impl Node {
     pub fn get_string(&self, key: &str) -> Result<String, ErrorCause> {
         match self.get(key) {
             Err(e) => Err(e),
-            Ok(node) => match *node {
-                Node::String(s) => Ok(s),
+            Ok(node) => match node.as_string() {
+                Some(s) => Ok(s),
                 _ => Err(ErrorCause::WrongTypeRequested)
             },
         }
@@ -144,9 +152,9 @@ impl Node {
     pub fn get_as_string(&self, key: &str) -> Result<String, ErrorCause> {
         match self.get(key) {
             Err(e) => Err(e),
-            Ok(node) => match node.as_string() {
-                None => Err(ErrorCause::WrongTypeRequested),
+            Ok(node) => match node.to_string() {
                 Some(data) => Ok(data),
+                None => Err(ErrorCause::WrongTypeRequested),
             },
         }
     }

@@ -27,7 +27,7 @@ fn parse_card(card: &str) {
             );
             println!(
                 "My age: {}",
-                match json_data.get_number("age").map(|n| n.to_string()) {
+                match json_data.get_as_string("age") {
                     Ok(s) => s,
                     Err(cause) => format!(
                         "it appears that I don't have an age! To be precisely, {}",
@@ -37,7 +37,7 @@ fn parse_card(card: &str) {
             );
             println!(
                 "My weight: {}",
-                match json_data.get_number("weight").map(|n| n.to_string()) {
+                match json_data.get_as_string("weight") {
                     Ok(s) => s,
                     Err(cause) => format!(
                         "it appears that I don't have an weight! To be precisely, {}",
@@ -50,19 +50,13 @@ fn parse_card(card: &str) {
                     if sizes.len() != 3 {
                         println!("Something wrong with sizes, they must be exactly 3 in length")
                     } else {
-                        let breast_size = sizes[0]
-                            .as_number()
-                            .map(|n| n.to_string())
+                        let breast_size = sizes[0].to_string()
                             .unwrap_or("???".to_string());
 
-                        let belly_size = sizes[1]
-                            .as_number()
-                            .map(|n| n.to_string())
+                        let belly_size = sizes[1].to_string()
                             .unwrap_or("???".to_string());
 
-                        let booty_size = sizes[2]
-                            .as_number()
-                            .map(|n| n.to_string())
+                        let booty_size = sizes[2].to_string()
                             .unwrap_or("???".to_string());
 
                         println!(
@@ -84,24 +78,25 @@ fn parse_card(card: &str) {
     println!()
 }
 
+const CARDS: [&'static str; 11] = [
+    r#"{"name": "Santa", "last_name": "Clous", "age": 99, "weight": 150, "sizes":[120, 120, 120] }"#,
+    r#"{"name": "Robin", "last_name": "Hood", "sizes":[90, 60, 90] }"#,
+    r#"{"name": "Non existing", "last_name": "Substance"}"#,
+    r#"{"name": "S", "last_name": "Expr", "age": "(99)", "weight": "(150)"}"#,
+    // ^^^ this is tricky. get_as_string() would do too well and get string data where it shouldn't,
+    // so this is where we should say "hey, get_as_string should return error when it sees a string"
+    // this is why this method has such strange semantic
+    "[]",
+    "{}",
+    "null",
+    "false",
+    "42",
+    r#""Who am I?""#,
+    "Что я такое?" // It fails. But it should. So it's good
+];
+
 fn main() {
-    parse_card(
-        r#"{"name": "Santa", "last_name": "Clous", "age": 99, "weight": 150, "sizes":[120, 120, 120] }"#
-    );
-    parse_card(
-        r#"{"name": "Robin", "last_name": "Hood", "sizes":[90, 60, 90] }"#
-    );
-    parse_card(
-        r#"{"name": "Non existing", "last_name": "Substance"}"#
-    );
-    parse_card(
-        r#"{"name": "S", "last_name": "Expr", "age": "(99)", "weight": "(150)"}"#
-    );
-    parse_card("[]");
-    parse_card("{}");
-    parse_card("null");
-    parse_card("false");
-    parse_card("42");
-    parse_card("\"Who am I?\"");
-    parse_card("Что я такое?"); // It fails but it does not breaks. It's fine
+    for card in CARDS.iter() {
+        parse_card(card);
+    }
 }
