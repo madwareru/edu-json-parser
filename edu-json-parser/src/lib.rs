@@ -177,8 +177,10 @@ fn json_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
 
 pub fn parse_json(content: &str) -> Result<Box<Node>, String> {
     let mut parser = c_hx_do!{
+        __ <- skip_many(space()),
         json <- json_parser(),
-        __ <- eof();
+        ___ <- skip_many(space()),
+        ____ <- eof();
         json
     };
     let res = parser.parse(content);
