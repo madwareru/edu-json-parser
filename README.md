@@ -1,5 +1,4 @@
 ![Rust](https://github.com/madwareru/edu-json-parser/workflows/Rust/badge.svg)
-
 # edu-json-parser
 Self-educational pet project.
 JSON parser made with a help of `combine` parser combinator library
