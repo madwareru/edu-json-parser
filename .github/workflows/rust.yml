@@ -1,0 +1,21 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: List current directory
+      run: ls
+    - name: Build
+      run: cd edu-json-parser && cargo build --verbose
+    - name: Run tests
+      run: cd edu-json-parser && cargo test --verbose
