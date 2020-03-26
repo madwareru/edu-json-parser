@@ -1,4 +1,4 @@
-use edu_json_parser::{parse_json, Node};
+use edu_json_parser::{Node, Parsable};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
@@ -24,40 +24,7 @@ impl Display for CardData {
     }
 }
 
-impl CardData {
-    pub fn parse_card(content: &str) -> Result<Self, String> {
-        let json = parse_json(content);
-        match json {
-            Ok(valid_json) => Self::parse_node(&*valid_json),
-            Err(error_data) => Err(format!("Error during parsing: {}", error_data.to_string())),
-        }
-    }
-
-    pub fn parse_cards(content: &str) -> Result<Vec<Self>, String> {
-        let json = parse_json(content);
-        match json {
-            Ok(valid_json) => Self::parse_nodes(&*valid_json),
-            Err(error_data) => Err(format!("Error during parsing: {}", error_data.to_string())),
-        }
-    }
-
-    fn parse_nodes(json: &Node) -> Result<Vec<Self>, String> {
-        if !json.is_array() {
-            return Err("Node is not array".to_string());
-        }
-        let length = json.len();
-        let mut result_vec = Vec::with_capacity(length);
-        for i in 0..length {
-            match Self::parse_node(&*json[i]) {
-                Ok(card) => result_vec.push(card),
-                Err(error_text) => return Err(
-                    format!("Error on parsing element {}: {}", i, error_text)
-                ),
-            }
-        }
-        Ok(result_vec)
-    }
-
+impl Parsable for CardData {
     fn parse_node(json: &Node) -> Result<Self, String> {
         if !json.is_dictionary() {
             return Err("Node is not a dictionary".to_string());
@@ -136,9 +103,9 @@ const SPOILED_CARDS: &'static str =
     "#;
 
 fn main() {
-    let single_card = CardData::parse_card(SINGLE_CARD);
-    let many_cards = CardData::parse_cards(MANY_CARDS);
-    let spoiled_cards = CardData::parse_cards(SPOILED_CARDS);
+    let single_card = CardData::parse(SINGLE_CARD);
+    let many_cards = CardData::parse_array(MANY_CARDS);
+    let spoiled_cards = CardData::parse_array(SPOILED_CARDS);
     match single_card {
         Ok(card) => println!("This card contains: {}", card),
         Err(error) => println!("Oops! Error on parse single card! {}", error),

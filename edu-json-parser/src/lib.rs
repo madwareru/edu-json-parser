@@ -4,6 +4,7 @@ extern crate combine;
 
 mod errors;
 mod details;
+mod traits;
 
 use std::collections::HashMap;
 use combine::{parser, eof};
@@ -13,6 +14,8 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
+pub use crate::traits::*;
+
 
 fn word_part<'a>() -> impl Parser<&'a str, Output = &'a str> {
     take_while1(|c: char| c != '\\' && c != '"')
