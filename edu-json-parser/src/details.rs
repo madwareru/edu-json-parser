@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::errors::ErrorCause;
 use crate::errors::ErrorCause::*;
 use std::ops::Index;
+use std::rc::Rc;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -10,8 +11,8 @@ pub enum Node
     Boolean(bool),
     Number(f64),
     String(String),
-    Array(Vec<Box<Node>>),
-    Dictionary(HashMap<String, Box<Node>>)
+    Array(Vec<Rc<Node>>),
+    Dictionary(HashMap<String, Rc<Node>>)
 }
 
 #[macro_export]
@@ -205,7 +206,7 @@ impl Node {
         }
     }
 
-    pub fn as_array(&self) -> Option<&Vec<Box<Node>>> {
+    pub fn as_array(&self) -> Option<&Vec<Rc<Node>>> {
         if let Node::Array(v) = self {
             Some(&v)
         } else {
@@ -217,7 +218,7 @@ impl Node {
         self.as_array().map(|_| true).unwrap_or(false)
     }
 
-    pub fn as_dictionary(&self) -> Option<&HashMap<String, Box<Node>>> {
+    pub fn as_dictionary(&self) -> Option<&HashMap<String, Rc<Node>>> {
         if let Node::Dictionary(d) = self {
             Some(&d)
         } else {
@@ -240,7 +241,7 @@ impl Node {
         }.expect("it appears that node is not array or dictionary so it has no len!")
     }
 
-    pub fn get_element_at(&self, idx: usize) -> Result<Box<Node>, ErrorCause> {
+    pub fn get_element_at(&self, idx: usize) -> Result<Rc<Node>, ErrorCause> {
         if let Some(arr) = self.as_array() {
             if idx < arr.len() {
                 Ok(arr[idx].clone())
@@ -252,7 +253,7 @@ impl Node {
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<Box<Node>, ErrorCause> {
+    pub fn get(&self, key: &str) -> Result<Rc<Node>, ErrorCause> {
         if let Some(dict) = self.as_dictionary() {
             match dict.get(key).map(|x| x.clone()) {
                 None => Err(FieldNotExist(key.to_string())),
@@ -306,7 +307,7 @@ impl Node {
 
 impl Index<&str> for Node
 {
-    type Output = Box<Node>;
+    type Output = Rc<Node>;
     fn index(&self, key: &str) -> &Self::Output {
         self.as_dictionary()
             .map(|v| &v[key])
@@ -316,7 +317,7 @@ impl Index<&str> for Node
 
 impl Index<usize> for Node
 {
-    type Output = Box<Node>;
+    type Output = Rc<Node>;
     fn index(&self, key: usize) -> &Self::Output {
         self.as_array()
             .map(|v| &v[key])

@@ -33,7 +33,6 @@ impl Parsable for CardData {
         if !json.is_dictionary() {
             return Err("Node is not a dictionary".to_string());
         }
-
         match parse_many!(json =>
             get_string("name"),
             get_string("last_name"),

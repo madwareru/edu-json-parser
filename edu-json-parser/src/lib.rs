@@ -15,6 +15,7 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
 pub use crate::traits::*;
+use std::rc::Rc;
 
 
 fn word_part<'a>() -> impl Parser<&'a str, Output = &'a str> {
@@ -45,8 +46,8 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
     }
 }
 
-fn string_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
-    string_parser_inner().map(|x| Box::new(Node::String(x)))
+fn string_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+    string_parser_inner().map(|x| Rc::new(Node::String(x)))
 }
 
 fn digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
@@ -61,7 +62,7 @@ fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
     }
 }
 
-fn number_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn number_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     c_hx_do! {
         digs <- digit_sequence(),
         trail <- optional(trailing_digit_sequence());
@@ -70,29 +71,29 @@ fn number_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
                 Some(t_digs) => format!("{}.{}", &digs, &t_digs),
                 _ => digs.clone()
             };
-            Box::new(Node::Number((&s).parse().unwrap()))
+            Rc::new(Node::Number((&s).parse().unwrap()))
         }
     }
 }
 
-fn bool_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn bool_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     c_hx_do!{
         word <- string("true").or(string("false"));
         match word {
-            "true" => Box::new(Node::Boolean(true)),
-            _ => Box::new(Node::Boolean(false))
+            "true" => Rc::new(Node::Boolean(true)),
+            _ => Rc::new(Node::Boolean(false))
         }
     }
 }
 
-fn null_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn null_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     c_hx_do!{
         _word <- string("null");
-        Box::new(Node::Null)
+        Rc::new(Node::Null)
     }
 }
 
-fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     let recursive_array_parser = parser(|input| {
         let _: &mut &str = input;
         array_parser().parse_stream(input).into_result()
@@ -118,19 +119,19 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
     }
 }
 
-fn array_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn array_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     between(
         c_compre![c; c <- char('['), __ <- skip_many(space())],
         c_compre![c; __ <- skip_many(space()), c <- char(']')],
         optional(sep_by(primitive_parser(), char(',')))
     ).map(
-        |nodes_opt: Option<Vec<Box<Node>>>| nodes_opt.map(
-            |nodes| Box::new(Node::Array(nodes))
+        |nodes_opt: Option<Vec<Rc<Node>>>| nodes_opt.map(
+            |nodes| Rc::new(Node::Array(nodes))
         ).unwrap()
     )
 }
 
-fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Box<Node>)> {
+fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Rc<Node>)> {
     let str_parser = c_hx_do!{
         __ <- skip_many(space()),
         stp <- string_parser_inner(),
@@ -146,20 +147,20 @@ fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Box<Node>)> {
     }
 }
 
-fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     between(
         c_compre![c; c <- char('{'), __ <- skip_many(space())],
         c_compre![c; __ <- skip_many(space()), c <- char('}')],
         optional(sep_by(pair_parser(), char(',')))
     ).map(
-        |nodes_opt: Option<Vec<(String, Box<Node>)>>| nodes_opt.map(
+        |nodes_opt: Option<Vec<(String, Rc<Node>)>>| nodes_opt.map(
             |nodes| {
                 let mut dict = HashMap::new();
                 for i in 0..nodes.len() {
                     let (l, r) = nodes[i].clone();
                     dict.insert(l, r);
                 }
-                Box::new(
+                Rc::new(
                     Node::Dictionary(
                         dict
                     )
@@ -169,7 +170,7 @@ fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
     )
 }
 
-fn json_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
+fn json_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     null_parser()
         .or(bool_parser())
         .or(number_parser())
@@ -178,7 +179,7 @@ fn json_parser<'a>() -> impl Parser<&'a str, Output = Box<Node>> {
         .or(dictionary_parser())
 }
 
-pub fn parse_json(content: &str) -> Result<Box<Node>, String> {
+pub fn parse_json(content: &str) -> Result<Rc<Node>, String> {
     let mut parser = c_hx_do!{
         __ <- skip_many(space()),
         json <- json_parser(),

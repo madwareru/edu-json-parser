@@ -2,14 +2,15 @@
 mod tests {
     use std::collections::HashMap;
     use edu_json_parser::{parse_json, Node};
+    use std::rc::Rc;
 
     #[test]
-    fn proof_of_concept() {
+    fn it_works() {
         let x = parse_json("\"lol\"");
         assert_eq!(Node::String("lol".to_string()), *x.unwrap());
 
         let x = parse_json("\"lol, \\\"it's nested\\\"\"");
-        assert_eq!(Ok(Box::new(Node::String("lol, \\\"it's nested\\\"".to_string()))), x);
+        assert_eq!(Ok(Rc::new(Node::String("lol, \\\"it's nested\\\"".to_string()))), x);
 
         let s = String::from(r#""who let the dogs out?""#);
         assert_eq!(Node::String("who let the dogs out?".to_string()), *parse_json(&s).unwrap());
@@ -36,41 +37,41 @@ mod tests {
         assert!(if let Err(_) = parse_json(&z){true}else{false});
 
         let z = String::from("[1, false, \"say\"]");
-        let arr = *parse_json(&z).unwrap();
+        let arr = &*parse_json(&z).unwrap();
         assert_eq!(Some(3), arr.as_array().map(|a| a.len()));
-        assert_eq!(Ok(Box::new(Node::Number(1.0))), arr.get_element_at(0));
-        assert_eq!(Ok(Box::new(Node::Boolean(false))), arr.get_element_at(1));
-        assert_eq!(Ok(Box::new(Node::String("say".to_string()))), arr.get_element_at(2));
+        assert_eq!(Ok(Rc::new(Node::Number(1.0))), arr.get_element_at(0));
+        assert_eq!(Ok(Rc::new(Node::Boolean(false))), arr.get_element_at(1));
+        assert_eq!(Ok(Rc::new(Node::String("say".to_string()))), arr.get_element_at(2));
 
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
-            Ok(Box::new(Node::Array(
+            Ok(Rc::new(Node::Array(
                 vec![
-                    Box::new(Node::Number(1.0)),
-                    Box::new(Node::Array(
+                    Rc::new(Node::Number(1.0)),
+                    Rc::new(Node::Array(
                         vec![
-                            Box::new(Node::Number(1.0)),
-                            Box::new(Node::Boolean(false)),
-                            Box::new(Node::String("say".to_string())),
+                            Rc::new(Node::Number(1.0)),
+                            Rc::new(Node::Boolean(false)),
+                            Rc::new(Node::String("say".to_string())),
                         ]
                     )),
-                    Box::new(Node::String("say".to_string())),
+                    Rc::new(Node::String("say".to_string())),
                 ]
             ))),
             parse_json(&z));
 
         let z = String::from("{\"number\": 1, \"bool\": false, \"string\": \"say\"}");
-        let dict = *(parse_json(&z).unwrap());
-        assert_eq!(Ok(Box::new(Node::Number(1.0))), dict.get("number"));
-        assert_eq!(Ok(Box::new(Node::Boolean(false))), dict.get("bool"));
-        assert_eq!(Ok(Box::new(Node::String("say".to_string()))), dict.get("string"));
+        let dict = &*(parse_json(&z).unwrap());
+        assert_eq!(Ok(Rc::new(Node::Number(1.0))), dict.get("number"));
+        assert_eq!(Ok(Rc::new(Node::Boolean(false))), dict.get("bool"));
+        assert_eq!(Ok(Rc::new(Node::String("say".to_string()))), dict.get("string"));
 
         let z = String::from("null");
-        assert_eq!(Ok(Box::new(Node::Null)), parse_json(&z));
+        assert_eq!(Ok(Rc::new(Node::Null)), parse_json(&z));
         let z = String::from("[]");
-        assert_eq!(Ok(Box::new(Node::Array(vec![]))), parse_json(&z));
+        assert_eq!(Ok(Rc::new(Node::Array(vec![]))), parse_json(&z));
         let z = String::from("{}");
-        assert_eq!(Ok(Box::new(Node::Dictionary(HashMap::new()))), parse_json(&z));
+        assert_eq!(Ok(Rc::new(Node::Dictionary(HashMap::new()))), parse_json(&z));
         let z = String::from("{}abra");
         assert!(if let Err(_) = parse_json(&z){ true } else { false });
     }
