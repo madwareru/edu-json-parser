@@ -50,11 +50,11 @@ fn string_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     string_parser_inner().map(|x| Node::String(x))
 }
 
-fn digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
-    take_while1(|c: char| c >= '0' && c <= '9').map(|x| String::from(x))
+fn digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
+    take_while1(|c: char| c >= '0' && c <= '9')
 }
 
-fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
+fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     c_hx_do! {
         __ <- char('.'),
         rest <- digit_sequence();
@@ -67,11 +67,13 @@ fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         digs <- digit_sequence(),
         trail <- optional(trailing_digit_sequence());
         {
-            let s = match trail {
-                Some(t_digs) => format!("{}.{}", &digs, &t_digs),
-                _ => digs.clone()
-            };
-            Node::Number((&s).parse().unwrap())
+            Node::Number(match trail {
+                Some(t_digs) => {
+                    let s = format!("{}.{}", &digs, &t_digs);
+                    (&s).parse().unwrap()
+                },
+                _ => digs.parse().unwrap()
+            })
         }
     }
 }
