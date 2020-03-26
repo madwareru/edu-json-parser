@@ -14,6 +14,130 @@ pub enum Node
     Dictionary(HashMap<String, Box<Node>>)
 }
 
+#[macro_export]
+macro_rules! parse_many {
+    ($node:ident => $method0:ident($lit0:literal), $method1:ident($lit1:literal)) => {
+        {
+            let v0 = $node.$method0($lit0);
+            let v1 = $node.$method1($lit1);
+            match v0 {
+                Err(err_data) => Err(err_data),
+                Ok(ok_data0) => {
+                    match v1 {
+                        Err(err_data) => Err(err_data),
+                        Ok(ok_data1) => Ok((ok_data0, ok_data1))
+                    }
+                }
+            }
+        }
+    };
+    ($node:ident =>
+        $method0:ident($lit0:literal),
+        $method1:ident($lit1:literal),
+        $method2:ident($lit2:literal)) => {
+        {
+            let v0 = $node.$method0($lit0);
+            let v1 = parse_many!($node => $method1($lit1), $method2($lit2));
+            match v0 {
+                Err(err_data) => Err(err_data),
+                Ok(ok_data0) => {
+                    match v1 {
+                        Err(err_data) => Err(err_data),
+                        Ok(ok_data1) => Ok((ok_data0, ok_data1.0, ok_data1.1))
+                    }
+                }
+            }
+        }
+    };
+    ($node:ident =>
+        $method0:ident($lit0:literal),
+        $method1:ident($lit1:literal),
+        $method2:ident($lit2:literal),
+        $method3:ident($lit3:literal)) => {
+        {
+            let v0 = $node.$method0($lit0);
+            let v1 = parse_many!($node =>
+                $method1($lit1),
+                $method2($lit2),
+                $method3($lit3));
+            match v0 {
+                Err(err_data) => Err(err_data),
+                Ok(ok_data0) => {
+                    match v1 {
+                        Err(err_data) => Err(err_data),
+                        Ok(ok_data1) => Ok((
+                            ok_data0,
+                            ok_data1.0,
+                            ok_data1.1,
+                            ok_data1.2))
+                    }
+                }
+            }
+        }
+    };
+    ($node:ident =>
+        $method0:ident($lit0:literal),
+        $method1:ident($lit1:literal),
+        $method2:ident($lit2:literal),
+        $method3:ident($lit3:literal),
+        $method4:ident($lit4:literal)) => {
+        {
+            let v0 = $node.$method0($lit0);
+            let v1 = parse_many!($node =>
+                $method1($lit1),
+                $method2($lit2),
+                $method3($lit3),
+                $method4($lit4));
+            match v0 {
+                Err(err_data) => Err(err_data),
+                Ok(ok_data0) => {
+                    match v1 {
+                        Err(err_data) => Err(err_data),
+                        Ok(ok_data1) => Ok((
+                            ok_data0,
+                            ok_data1.0,
+                            ok_data1.1,
+                            ok_data1.2,
+                            ok_data1.3))
+                    }
+                }
+            }
+        }
+    };
+    ($node:ident =>
+        $method0:ident($lit0:literal),
+        $method1:ident($lit1:literal),
+        $method2:ident($lit2:literal),
+        $method3:ident($lit3:literal),
+        $method4:ident($lit4:literal),
+        $method5:ident($lit5:literal)) => {
+        {
+            let v0 = $node.$method0($lit0);
+            let v1 = parse_many!($node =>
+                $method1($lit1),
+                $method2($lit2),
+                $method3($lit3),
+                $method4($lit4),
+                $method5($lit5));
+            match v0 {
+                Err(err_data) => Err(err_data),
+                Ok(ok_data0) => {
+                    match v1 {
+                        Err(err_data) => Err(err_data),
+                        Ok(ok_data1) => Ok((
+                            ok_data0,
+                            ok_data1.0,
+                            ok_data1.1,
+                            ok_data1.2,
+                            ok_data1.3,
+                            ok_data1.4))
+                    }
+                }
+            }
+        }
+    };
+}
+
 impl Node {
     pub fn is_null(&self) -> bool {
         *self == Node::Null
@@ -118,10 +242,10 @@ impl Node {
 
     pub fn get_element_at(&self, idx: usize) -> Result<Box<Node>, ErrorCause> {
         if let Some(arr) = self.as_array() {
-            if idx <= arr.len() {
+            if idx < arr.len() {
                 Ok(arr[idx].clone())
             } else {
-                Err(IndexOutOfBound)
+                Err(IndexOutOfBound(idx))
             }
         } else {
             Err(NodeIsNotArray)
@@ -131,7 +255,7 @@ impl Node {
     pub fn get(&self, key: &str) -> Result<Box<Node>, ErrorCause> {
         if let Some(dict) = self.as_dictionary() {
             match dict.get(key).map(|x| x.clone()) {
-                None => Err(ItemNotExist),
+                None => Err(FieldNotExist(key.to_string())),
                 Some(x) => Ok(x),
             }
         } else {
@@ -144,7 +268,7 @@ impl Node {
             Err(e) => Err(e),
             Ok(node) => match node.as_string() {
                 Some(s) => Ok(s),
-                _ => Err(ErrorCause::WrongTypeRequested)
+                _ => Err(ErrorCause::WrongTypeRequested(key.to_string(), "string"))
             },
         }
     }
@@ -154,7 +278,7 @@ impl Node {
             Err(e) => Err(e),
             Ok(node) => match node.to_string() {
                 Some(data) => Ok(data),
-                None => Err(ErrorCause::WrongTypeRequested),
+                None => Err(ErrorCause::WrongTypeRequested(key.to_string(), "as string")),
             },
         }
     }
@@ -163,7 +287,7 @@ impl Node {
         match self.get(key) {
             Err(e) => Err(e),
             Ok(node) => match node.as_number() {
-                None => Err(ErrorCause::WrongTypeRequested),
+                None => Err(ErrorCause::WrongTypeRequested(key.to_string(), "number")),
                 Some(data) => Ok(data),
             },
         }
@@ -173,7 +297,7 @@ impl Node {
         match self.get(key) {
             Err(e) => Err(e),
             Ok(node) => match node.as_bool() {
-                None => Err(ErrorCause::WrongTypeRequested),
+                None => Err(ErrorCause::WrongTypeRequested(key.to_string(), "bool")),
                 Some(data) => Ok(data),
             },
         }

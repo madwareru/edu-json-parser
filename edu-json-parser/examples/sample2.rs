@@ -1,5 +1,9 @@
+#[macro_use]
+extern crate edu_json_parser;
+
 use edu_json_parser::{Node, Parsable};
 use std::fmt::{Display, Formatter};
+
 
 #[derive(Debug)]
 pub struct CardData {
@@ -29,57 +33,40 @@ impl Parsable for CardData {
         if !json.is_dictionary() {
             return Err("Node is not a dictionary".to_string());
         }
-        let name = match json.get_string("name") {
-            Ok(ok_data) => ok_data,
-            Err(err_data) => return Err(
-                format!("failed to retrieve name: {}", err_data.to_string())
-            )
-        };
-        let last_name = match json.get_string("last_name") {
-            Ok(ok_data) => ok_data,
-            Err(err_data) => return Err(
-                format!("failed to retrieve last_name: {}", err_data.to_string())
-            )
-        };
-        let age = match json.get_number("age")  {
-            Ok(ok_data) => ok_data,
-            Err(err_data) => return Err(
-                format!("failed to retrieve age: {}", err_data.to_string())
-            )
-        };
-        let weight = match json.get_number("weight")  {
-            Ok(ok_data) => ok_data,
-            Err(err_data) => return Err(
-                format!("failed to retrieve weight: {}", err_data.to_string())
-            )
-        };
-        let sizes = match json.get("sizes") {
-            Ok(boxed_node) => {
-                if !boxed_node.is_array() {
-                    return Err(
-                        "failed to retrieve sizes: node is not array".to_string()
-                    );
-                }
-                if boxed_node.len() != 3 {
-                    return Err(
-                        "failed to retrieve sized: length aren't equal 3".to_string()
-                    );
-                }
-                let breast_size = boxed_node[0].as_number();
-                let belly_size = boxed_node[1].as_number();
-                let booty_size = boxed_node[2].as_number();
-                match (breast_size, belly_size, booty_size) {
-                    (Some(breast), Some(belly), Some(booty)) => [breast, belly, booty],
-                    _ => return Err(
-                        "failed to retrieve sized: some of the array elements is not a number".to_string()
-                    )
-                }
+
+        match parse_many!(json =>
+            get_string("name"),
+            get_string("last_name"),
+            get_number("age"),
+            get_number("weight"),
+            get("sizes")
+        ) {
+            Ok((name, last_name, age, weight, sizes_node)) => {
+                let sizes = {
+                    if !sizes_node.is_array() {
+                        return Err(
+                            "failed to retrieve sizes: node is not array".to_string()
+                        );
+                    }
+                    if sizes_node.len() != 3 {
+                        return Err(
+                            "failed to retrieve sizes: length aren't equal 3".to_string()
+                        );
+                    }
+                    let breast_size = sizes_node[0].as_number();
+                    let belly_size = sizes_node[1].as_number();
+                    let booty_size = sizes_node[2].as_number();
+                    match (breast_size, belly_size, booty_size) {
+                        (Some(breast), Some(belly), Some(booty)) => [breast, belly, booty],
+                        _ => return Err(
+                            "failed to retrieve sizes: some of the array elements is not a number".to_string()
+                        )
+                    }
+                };
+                Ok(CardData{ name, last_name, age, weight, sizes })
             },
-            Err(err_data) => return Err(
-                format!("failed to retrieve weight: {}", err_data.to_string())
-            )
-        };
-        Ok(CardData{ name, last_name, age, weight, sizes })
+            Err(err_data) => Err(format!("parse failed: {}", err_data.to_string())),
+        }
     }
 }
 

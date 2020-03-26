@@ -1,8 +1,8 @@
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum ErrorCause {
-    ItemNotExist,
-    WrongTypeRequested,
-    IndexOutOfBound,
+    FieldNotExist(String),
+    WrongTypeRequested(String, &'static str),
+    IndexOutOfBound(usize),
     NodeIsNotArray,
     NodeIsNotDictionary
 }
@@ -10,11 +10,20 @@ pub enum ErrorCause {
 impl ToString for ErrorCause {
     fn to_string(&self) -> String {
         match self {
-            ErrorCause::ItemNotExist => "Item not exist".to_string(),
-            ErrorCause::WrongTypeRequested => "Wrong type requested".to_string(),
-            ErrorCause::IndexOutOfBound => "Index is out of bounds".to_string(),
-            ErrorCause::NodeIsNotArray => "Node is not an array".to_string(),
-            ErrorCause::NodeIsNotDictionary => "Node is not a dictionary".to_string(),
+            ErrorCause::FieldNotExist(field_name) => format!(
+                "Field with a name '{}' do not exist", field_name
+            ),
+            ErrorCause::WrongTypeRequested(field_name, type_name) => format!(
+                "Trying to look at field '{}' like it was of a type `{}`, but found something other instead",
+                field_name, type_name
+            ),
+            ErrorCause::IndexOutOfBound(idx) => format!(
+                "Index {} is out of bounds", idx
+            ),
+            ErrorCause::NodeIsNotArray =>
+                "Trying to work with a node like it was an array, but it didn't".to_string(),
+            ErrorCause::NodeIsNotDictionary =>
+                "Trying to work with a node like it was a dictionary, but it didn't".to_string(),
         }
     }
 }
