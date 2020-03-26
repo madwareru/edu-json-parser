@@ -11,7 +11,7 @@ impl ToString for ErrorCause {
     fn to_string(&self) -> String {
         match self {
             ErrorCause::FieldNotExist(field_name) => format!(
-                "Field with a name '{}' do not exist", field_name
+                "Field with a name '{}' does not exist", field_name
             ),
             ErrorCause::WrongTypeRequested(field_name, type_name) => format!(
                 "Trying to look at field '{}' like it was of a type `{}`, but found something other instead",

@@ -37,7 +37,7 @@ mod tests {
         assert!(if let Err(_) = parse_json(&z){true}else{false});
 
         let z = String::from("[1, false, \"say\"]");
-        let arr = &*parse_json(&z).unwrap();
+        let arr = parse_json(&z).unwrap();
         assert_eq!(Some(3), arr.as_array().map(|a| a.len()));
         assert_eq!(Ok(Rc::new(Node::Number(1.0))), arr.get_element_at(0));
         assert_eq!(Ok(Rc::new(Node::Boolean(false))), arr.get_element_at(1));
@@ -61,7 +61,7 @@ mod tests {
             parse_json(&z));
 
         let z = String::from("{\"number\": 1, \"bool\": false, \"string\": \"say\"}");
-        let dict = &*(parse_json(&z).unwrap());
+        let dict = parse_json(&z).unwrap();
         assert_eq!(Ok(Rc::new(Node::Number(1.0))), dict.get("number"));
         assert_eq!(Ok(Rc::new(Node::Boolean(false))), dict.get("bool"));
         assert_eq!(Ok(Rc::new(Node::String("say".to_string()))), dict.get("string"));
