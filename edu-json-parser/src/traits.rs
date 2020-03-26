@@ -12,7 +12,7 @@ pub trait Parsable {
         let length = json.len();
         let mut result_vec = Vec::with_capacity(length);
         for i in 0..length {
-            match Self::parse_node(&*json[i]) {
+            match Self::parse_node(&json[i]) {
                 Ok(card) => result_vec.push(card),
                 Err(error_text) => return Err(
                     format!("Error on parsing element {}: {}", i, error_text)
@@ -26,7 +26,7 @@ pub trait Parsable {
     {
         let json = parse_json(content);
         match json {
-            Ok(valid_json) => Self::parse_node(&*valid_json),
+            Ok(valid_json) => Self::parse_node(&valid_json),
             Err(error_data) => Err(format!("Error during parsing: {}", error_data.to_string())),
         }
     }
@@ -35,7 +35,7 @@ pub trait Parsable {
     {
         let json = parse_json(content);
         match json {
-            Ok(valid_json) => Self::parse_node_array(&*valid_json),
+            Ok(valid_json) => Self::parse_node_array(&valid_json),
             Err(error_data) => Err(format!("Error during parsing: {}", error_data.to_string())),
         }
     }

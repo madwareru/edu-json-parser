@@ -4,7 +4,7 @@ pub enum ErrorCause {
     WrongTypeRequested(String, &'static str),
     IndexOutOfBound(usize),
     NodeIsNotArray,
-    NodeIsNotDictionary
+    NodeIsNotADictionary
 }
 
 impl ToString for ErrorCause {
@@ -22,7 +22,7 @@ impl ToString for ErrorCause {
             ),
             ErrorCause::NodeIsNotArray =>
                 "Trying to work with a node like it was an array, but it didn't".to_string(),
-            ErrorCause::NodeIsNotDictionary =>
+            ErrorCause::NodeIsNotADictionary =>
                 "Trying to work with a node like it was a dictionary, but it didn't".to_string(),
         }
     }

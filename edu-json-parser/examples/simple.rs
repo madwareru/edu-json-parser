@@ -8,7 +8,7 @@ fn parse_card(card: &str) {
             println!(
                 "My name: {}",
                 match json_data.get_string("name") {
-                    Ok(s) => s,
+                    Ok(s) => s.to_string(),
                     Err(cause) => format!(
                         "it appears that I don't have a name! To be precisely, {}",
                         cause.to_string()
@@ -18,7 +18,7 @@ fn parse_card(card: &str) {
             println!(
                 "My last_name: {}",
                 match json_data.get_string("last_name") {
-                    Ok(s) => s,
+                    Ok(s) => s.to_string(),
                     Err(cause) => format!(
                         "it appears that I don't have a last_name! To be precisely, {}",
                         cause.to_string()
@@ -28,7 +28,7 @@ fn parse_card(card: &str) {
             println!(
                 "My age: {}",
                 match json_data.get_as_string("age") {
-                    Ok(s) => s,
+                    Ok(s) => s.to_string(),
                     Err(cause) => format!(
                         "it appears that I don't have an age! To be precisely, {}",
                         cause.to_string()
@@ -38,7 +38,7 @@ fn parse_card(card: &str) {
             println!(
                 "My weight: {}",
                 match json_data.get_as_string("weight") {
-                    Ok(s) => s,
+                    Ok(s) => s.to_string(),
                     Err(cause) => format!(
                         "it appears that I don't have an weight! To be precisely, {}",
                         cause.to_string()

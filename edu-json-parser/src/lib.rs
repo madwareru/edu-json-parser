@@ -46,8 +46,8 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
     }
 }
 
-fn string_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
-    string_parser_inner().map(|x| Rc::new(Node::String(x)))
+fn string_parser<'a>() -> impl Parser<&'a str, Output = Node> {
+    string_parser_inner().map(|x| Node::String(x))
 }
 
 fn digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
@@ -62,7 +62,7 @@ fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = String> {
     }
 }
 
-fn number_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     c_hx_do! {
         digs <- digit_sequence(),
         trail <- optional(trailing_digit_sequence());
@@ -71,29 +71,29 @@ fn number_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
                 Some(t_digs) => format!("{}.{}", &digs, &t_digs),
                 _ => digs.clone()
             };
-            Rc::new(Node::Number((&s).parse().unwrap()))
+            Node::Number((&s).parse().unwrap())
         }
     }
 }
 
-fn bool_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn bool_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     c_hx_do!{
         word <- string("true").or(string("false"));
         match word {
-            "true" => Rc::new(Node::Boolean(true)),
-            _ => Rc::new(Node::Boolean(false))
+            "true" => Node::Boolean(true),
+            _ => Node::Boolean(false)
         }
     }
 }
 
-fn null_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn null_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     c_hx_do!{
         _word <- string("null");
-        Rc::new(Node::Null)
+        Node::Null
     }
 }
 
-fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     let recursive_array_parser = parser(|input| {
         let _: &mut &str = input;
         array_parser().parse_stream(input).into_result()
@@ -119,19 +119,19 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
     }
 }
 
-fn array_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     between(
         c_compre![c; c <- char('['), __ <- skip_many(space())],
         c_compre![c; __ <- skip_many(space()), c <- char(']')],
         optional(sep_by(primitive_parser(), char(',')))
     ).map(
-        |nodes_opt: Option<Vec<Rc<Node>>>| nodes_opt.map(
-            |nodes| Rc::new(Node::Array(nodes))
+        |nodes_opt: Option<Vec<Node>>| nodes_opt.map(
+            |nodes| Node::Array(Rc::from(nodes))
         ).unwrap()
     )
 }
 
-fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Rc<Node>)> {
+fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Node)> {
     let str_parser = c_hx_do!{
         __ <- skip_many(space()),
         stp <- string_parser_inner(),
@@ -147,30 +147,28 @@ fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Rc<Node>)> {
     }
 }
 
-fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     between(
         c_compre![c; c <- char('{'), __ <- skip_many(space())],
         c_compre![c; __ <- skip_many(space()), c <- char('}')],
         optional(sep_by(pair_parser(), char(',')))
     ).map(
-        |nodes_opt: Option<Vec<(String, Rc<Node>)>>| nodes_opt.map(
+        |nodes_opt: Option<Vec<(String, Node)>>| nodes_opt.map(
             |nodes| {
                 let mut dict = HashMap::new();
                 for i in 0..nodes.len() {
                     let (l, r) = nodes[i].clone();
                     dict.insert(l, r);
                 }
-                Rc::new(
-                    Node::Dictionary(
-                        dict
-                    )
+                Node::Dictionary(
+                    Rc::from(dict)
                 )
             }
         ).unwrap()
     )
 }
 
-fn json_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
+fn json_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     null_parser()
         .or(bool_parser())
         .or(number_parser())
@@ -179,7 +177,7 @@ fn json_parser<'a>() -> impl Parser<&'a str, Output = Rc<Node>> {
         .or(dictionary_parser())
 }
 
-pub fn parse_json(content: &str) -> Result<Rc<Node>, String> {
+pub fn parse_json(content: &str) -> Result<Node, String> {
     let mut parser = c_hx_do!{
         __ <- skip_many(space()),
         json <- json_parser(),

@@ -11,8 +11,8 @@ pub enum Node
     Boolean(bool),
     Number(f64),
     String(String),
-    Array(Vec<Rc<Node>>),
-    Dictionary(HashMap<String, Rc<Node>>)
+    Array(Rc<Vec<Node>>),
+    Dictionary(Rc<HashMap<String, Node>>)
 }
 
 #[macro_export]
@@ -206,9 +206,9 @@ impl Node {
         }
     }
 
-    pub fn as_array(&self) -> Option<&Vec<Rc<Node>>> {
+    pub fn as_array(&self) -> Option<Rc<Vec<Node>>> {
         if let Node::Array(v) = self {
-            Some(&v)
+            Some(v.clone())
         } else {
             None
         }
@@ -218,9 +218,9 @@ impl Node {
         self.as_array().map(|_| true).unwrap_or(false)
     }
 
-    pub fn as_dictionary(&self) -> Option<&HashMap<String, Rc<Node>>> {
+    pub fn as_dictionary(&self) -> Option<Rc<HashMap<String, Node>>> {
         if let Node::Dictionary(d) = self {
-            Some(&d)
+            Some(d.clone())
         } else {
             None
         }
@@ -241,7 +241,7 @@ impl Node {
         }.expect("it appears that node is not array or dictionary so it has no len!")
     }
 
-    pub fn get_element_at(&self, idx: usize) -> Result<Rc<Node>, ErrorCause> {
+    pub fn get_element_at(&self, idx: usize) -> Result<Node, ErrorCause> {
         if let Some(arr) = self.as_array() {
             if idx < arr.len() {
                 Ok(arr[idx].clone())
@@ -253,22 +253,23 @@ impl Node {
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<Rc<Node>, ErrorCause> {
-        if let Some(dict) = self.as_dictionary() {
-            match dict.get(key).map(|x| x.clone()) {
-                None => Err(FieldNotExist(key.to_string())),
-                Some(x) => Ok(x),
-            }
-        } else {
-            Err(NodeIsNotDictionary)
+    pub fn get(&self, key: &str) -> Result<&Node, ErrorCause> {
+        match self {
+            Node::Dictionary(d) => {
+                match d.get(key) {
+                    None => Err(FieldNotExist(key.to_string())),
+                    Some(x) => Ok(x)
+                }
+            },
+            _ => Err(NodeIsNotADictionary)
         }
     }
 
-    pub fn get_string(&self, key: &str) -> Result<String, ErrorCause> {
+    pub fn get_string(&self, key: &str) -> Result<&String, ErrorCause> {
         match self.get(key) {
             Err(e) => Err(e),
-            Ok(node) => match node.as_string() {
-                Some(s) => Ok(s),
+            Ok(node) => match node {
+                Node::String(s) => Ok(s),
                 _ => Err(ErrorCause::WrongTypeRequested(key.to_string(), "string"))
             },
         }
@@ -307,20 +308,26 @@ impl Node {
 
 impl Index<&str> for Node
 {
-    type Output = Rc<Node>;
+    type Output = Node;
     fn index(&self, key: &str) -> &Self::Output {
-        self.as_dictionary()
-            .map(|v| &v[key])
-            .expect("trying to use non-dictionary node as dictionary")
+        match self {
+            Node::Dictionary(d) => {
+                &d[key]
+            },
+            _ => panic!("fail")
+        }
     }
 }
 
 impl Index<usize> for Node
 {
-    type Output = Rc<Node>;
+    type Output = Node;
     fn index(&self, key: usize) -> &Self::Output {
-        self.as_array()
-            .map(|v| &v[key])
-            .expect("trying to use non-array node as dictionary")
+        match self {
+            Node::Array(a) => {
+                &a[key]
+            },
+            _ => panic!("fail")
+        }
     }
 }

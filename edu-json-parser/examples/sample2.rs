@@ -62,7 +62,13 @@ impl Parsable for CardData {
                         )
                     }
                 };
-                Ok(CardData{ name, last_name, age, weight, sizes })
+                Ok(CardData{
+                    name: name.to_string(),
+                    last_name: last_name.to_string(),
+                    age,
+                    weight,
+                    sizes
+                })
             },
             Err(err_data) => Err(format!("parse failed: {}", err_data.to_string())),
         }
