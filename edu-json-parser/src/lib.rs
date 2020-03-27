@@ -72,9 +72,9 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
                 attempt(string("\\t").map(|_|StringPiece::Ref("\t"))),
                 attempt(string("\\/").map(|_|StringPiece::Ref("/"))),
                 attempt(string("\\r").map(|_|StringPiece::Ref("\r"))),
-                attempt(unicode_char().map(|s|StringPiece::Str(s))),
                 attempt(string("\\f").map(|_|StringPiece::Ref("\u{000c}"))),
                 attempt(string("\\b").map(|_|StringPiece::Ref("\u{0008}"))),
+                attempt(unicode_char().map(|s|StringPiece::Str(s))),
             )
         )
     )

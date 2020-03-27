@@ -209,6 +209,7 @@ dependencies = [
  "compre_combinee",
  "criterion",
  "json",
+ "serde_json",
 ]
 
 [[package]]
