@@ -15,7 +15,7 @@ mod tests {
         include!("fail10.json"),
         include!("fail11.json"),
         include!("fail12.json"),
-        include!("fail13.json"), // <- TODO: make it pass and uncomment in asserts
+        include!("fail13.json"), // <- TODO: make it fail
         include!("fail14.json"),
         include!("fail15.json"),
         include!("fail16.json"),
@@ -27,7 +27,7 @@ mod tests {
         include!("fail22.json"),
         include!("fail23.json"),
         include!("fail24.json"),
-        include!("fail25.json"), // <- TODO: make it pass and uncomment in asserts
+        include!("fail25.json"), // <- TODO: make it fail
         include!("fail26.json"),
         include!("fail27.json"),
         include!("fail28.json"),
@@ -39,7 +39,7 @@ mod tests {
     ];
 
     const PASSES: [&'static str; 3] = [
-        include!("pass01.json"), // <- TODO: make it pass and uncomment in asserts
+        include!("pass01.json"), // <- TODO: make it pass
         include!("pass02.json"),
         include!("pass03.json")
     ];
@@ -58,7 +58,7 @@ mod tests {
         assert!(parse_json(FAILS[9]).is_err());
         assert!(parse_json(FAILS[10]).is_err());
         assert!(parse_json(FAILS[11]).is_err());
-        //assert!(parse_json(FAILS[12]).is_err());
+        assert!(parse_json(FAILS[12]).is_err());
         assert!(parse_json(FAILS[13]).is_err());
         assert!(parse_json(FAILS[14]).is_err());
         assert!(parse_json(FAILS[15]).is_err());
@@ -70,7 +70,7 @@ mod tests {
         assert!(parse_json(FAILS[21]).is_err());
         assert!(parse_json(FAILS[22]).is_err());
         assert!(parse_json(FAILS[23]).is_err());
-        //assert!(parse_json(FAILS[24]).is_err());
+        assert!(parse_json(FAILS[24]).is_err());
         assert!(parse_json(FAILS[25]).is_err());
         assert!(parse_json(FAILS[26]).is_err());
         assert!(parse_json(FAILS[27]).is_err());
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn json_cpp_passes() {
-        //assert!(parse_json(PASSES[0]).is_ok());
+        assert!(parse_json(PASSES[0]).is_ok());
         assert!(parse_json(PASSES[1]).is_ok());
         assert!(parse_json(PASSES[2]).is_ok());
     }
