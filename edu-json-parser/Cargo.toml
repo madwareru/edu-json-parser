@@ -6,6 +6,17 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+bench = false
+
 [dependencies]
+json = "0.12.4"
 combine = "4.0.1"
 compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.4" }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "test_bench"
+harness = false

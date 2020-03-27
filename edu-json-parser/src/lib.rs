@@ -64,15 +64,28 @@ fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
 
 fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     c_hx_do! {
+        minus_sign <- optional(char('-')),
         digs <- digit_sequence(),
         trail <- optional(trailing_digit_sequence());
         {
-            Node::Number(match trail {
-                Some(t_digs) => {
-                    let s = format!("{}.{}", &digs, &t_digs);
-                    (&s).parse().unwrap()
-                },
-                _ => digs.parse().unwrap()
+            Node::Number({
+                let mut acc = 0.0;
+                for c in digs.chars() {
+                    acc *= 10.0;
+                    acc += (c as i64 - '0' as i64) as f64;
+                }
+                if let Some(t_digs) = trail {
+                    let mut divider = 1.0;
+                    for c in t_digs.chars() {
+                        divider /= 10.0;
+                        acc += (c as i64 - '0' as i64) as f64 * divider;
+                    }
+                }
+                if let Some(_) = minus_sign {
+                    -acc
+                } else {
+                    acc
+                }
             })
         }
     }
@@ -95,23 +108,22 @@ fn null_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     }
 }
 
+macro_rules! ref_parser {
+    ($parser_fn:ident) => {
+        parser(|input| {
+            let _: &mut &str = input;
+            $parser_fn().parse_stream(input).into_result()
+        })
+    }
+}
+
 fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Node> {
-    let recursive_array_parser = parser(|input| {
-        let _: &mut &str = input;
-        array_parser().parse_stream(input).into_result()
-    });
-
-    let recursive_dict_parser = parser(|input| {
-        let _: &mut &str = input;
-        dictionary_parser().parse_stream(input).into_result()
-    });
-
     let possible_parser = bool_parser()
         .or(number_parser())
         .or(string_parser())
         .or(null_parser())
-        .or(recursive_array_parser)
-        .or(recursive_dict_parser);
+        .or(ref_parser!(array_parser))
+        .or(ref_parser!(dictionary_parser));
 
     c_hx_do! {
         __ <- skip_many(space()),
@@ -121,15 +133,26 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     }
 }
 
-fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
+fn braced_parser<'a, PBL, P, PBR, O>(pbl: PBL, p: P, pbr: PBR) -> impl Parser<&'a str, Output = O>
+    where
+        PBL: Parser<&'a str>,
+        PBR: Parser<&'a str>,
+        P: Parser<&'a str, Output = O>
+{
     between(
-        c_compre![c; c <- char('['), __ <- skip_many(space())],
-        c_compre![c; __ <- skip_many(space()), c <- char(']')],
-        optional(sep_by(primitive_parser(), char(',')))
-    ).map(
-        |nodes_opt: Option<Vec<Node>>| nodes_opt.map(
-            |nodes| Node::Array(Rc::from(nodes))
-        ).unwrap()
+        c_compre![c; c <- pbl, __ <- skip_many(space())],
+        c_compre![c; __ <- skip_many(space()), c <- pbr],
+        p
+    )
+}
+
+fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
+    braced_parser(
+        char('['),
+        sep_by(primitive_parser(), char(',')),
+        char(']')
+    ).map(|nodes: Vec<Node>|
+        Node::Array(Rc::from(nodes))
     )
 }
 
@@ -150,24 +173,20 @@ fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Node)> {
 }
 
 fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
-    between(
-        c_compre![c; c <- char('{'), __ <- skip_many(space())],
-        c_compre![c; __ <- skip_many(space()), c <- char('}')],
-        optional(sep_by(pair_parser(), char(',')))
-    ).map(
-        |nodes_opt: Option<Vec<(String, Node)>>| nodes_opt.map(
-            |nodes| {
-                let mut dict = HashMap::new();
-                for i in 0..nodes.len() {
-                    let (l, r) = nodes[i].clone();
-                    dict.insert(l, r);
-                }
-                Node::Dictionary(
-                    Rc::from(dict)
-                )
-            }
-        ).unwrap()
-    )
+    braced_parser(
+        char('{'),
+        sep_by(pair_parser(), char(',')),
+        char('}')
+    ).map(|nodes: Vec<(String, Node)>| {
+        let mut dict = HashMap::with_capacity(nodes.len());
+        for i in 0..nodes.len() {
+            let (l, r) = nodes[i].clone();
+            dict.insert(l, r);
+        }
+        Node::Dictionary(
+            Rc::from(dict)
+        )
+    })
 }
 
 fn json_parser<'a>() -> impl Parser<&'a str, Output = Node> {

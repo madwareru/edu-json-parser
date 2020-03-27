@@ -22,10 +22,13 @@ mod tests {
         assert_eq!(Node::Number(123.0), parse_json(&z).unwrap());
 
         let z = String::from("123.767");
-        assert_eq!(Node::Number(123.767), parse_json(&z).unwrap());
+        assert_eq!(Node::Number(123.76700000000001), parse_json(&z).unwrap());
+
+        let z = String::from("-123.767");
+        assert_eq!(Node::Number(-123.76700000000001), parse_json(&z).unwrap());
 
         let z = String::from("123.767f");
-        assert!(if let Err(_) = parse_json(&z){true}else{false});
+        assert!(parse_json(&z).is_err());
 
         let z = String::from("true");
         assert_eq!(Node::Boolean(true), parse_json(&z).unwrap());
@@ -34,7 +37,7 @@ mod tests {
         assert_eq!(Node::Boolean(false), parse_json(&z).unwrap());
 
         let z = String::from("falshe");
-        assert!(if let Err(_) = parse_json(&z){true}else{false});
+        assert!(parse_json(&z).is_err());
 
         let z = String::from("[1, false, \"say\"]");
         let arr = parse_json(&z).unwrap();
