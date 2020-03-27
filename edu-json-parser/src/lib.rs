@@ -7,7 +7,7 @@ mod details;
 mod traits;
 
 use std::collections::HashMap;
-use combine::{parser, eof};
+use combine::{parser, eof, satisfy, choice, attempt};
 use combine::parser::range::{take_while1};
 use combine::parser::char::*;
 use combine::{Parser, many, optional, skip_many, sep_by, between};
@@ -15,19 +15,69 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
 pub use crate::traits::*;
+use std::f64;
 use std::rc::Rc;
+use std::convert::TryFrom;
 
-
-fn word_part<'a>() -> impl Parser<&'a str, Output = &'a str> {
-    take_while1(|c: char| c != '\\' && c != '"')
+fn parse_hex<'a>() -> impl Parser<&'a str, Output = u32> {
+    satisfy(|c: char|
+        (c >= '0' && c <= '9') ||
+        (c >= 'a' && c <= 'f') ||
+        (c >= 'A' && c <= 'F')
+    ).map(|c| if c >= '0' && c <= '9' {
+            c as u64 - '0' as u64
+        } else if c >= 'a' && c <= 'f' {
+            10 + c as u64 - 'a' as u64
+        } else {
+            10 + c as u64 - 'A' as u64
+        } as u32
+    )
 }
 
-fn escaped<'a>() -> impl Parser<&'a str, Output = &'a str> {
-    string("\\\"")
+fn unicode_char<'a>() -> impl Parser<&'a str, Output = String> {
+    c_hx_do!{
+        __ <- string(r#"\u"#),
+        d3 <- parse_hex(),
+        d2 <- parse_hex(),
+        d1 <- parse_hex(),
+        d0 <- parse_hex();
+        {
+            let unicode: u32 = d0 +
+            10 * d1 +
+            100 * d2 +
+            1000 * d3;
+            char::try_from(unicode)
+                .map(|c| c.to_string())
+                .unwrap_or(String::from(""))
+        }
+    }
 }
 
-fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<&'a str>> {
-    many(escaped().or(word_part()))
+#[derive(PartialEq)]
+enum StringPiece<'a >
+{
+    Ref(&'a str),
+    Str(String)
+}
+
+fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
+    many(
+        choice(
+            (
+                attempt(take_while1(|c: char| c != '\\' && c != '"' && c != '\n' && c != '\r' && c != '\t')
+                    .map(|chars: &str| StringPiece::Ref(chars))),
+                attempt(string("\\\"").map(|_|StringPiece::Ref("\""))),
+                attempt(string("\\\\").map(|_|StringPiece::Ref("\\"))),
+                attempt(string("\\n").map(|_|StringPiece::Ref("\n"))),
+                attempt(string("\\t").map(|_|StringPiece::Ref("\t"))),
+                attempt(string("\\/").map(|_|StringPiece::Ref("/"))),
+                attempt(string("\\r").map(|_|StringPiece::Ref("\r"))),
+                attempt(unicode_char().map(|s|StringPiece::Str(s))),
+                attempt(string("\\f").map(|_|StringPiece::Ref("\u{000c}"))),
+                attempt(string("\\b").map(|_|StringPiece::Ref("\u{0008}"))),
+            )
+        )
+    )
 }
 
 fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
@@ -36,10 +86,19 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
         x  <- string_part(),
         ___ <- char('"');
         {
-            let cap = x.iter().fold(0, |acc, s| acc + s.len());
+            let cap = x.iter().fold(0, |acc, s|
+                acc +
+                match s {
+                    StringPiece::Ref(strref) => strref.len(),
+                    StringPiece::Str(string) => string.len()
+                }
+            );
             let mut str = String::with_capacity(cap);
             for s in x.iter() {
-                str.push_str(s);
+                match s {
+                    StringPiece::Ref(strref) => str.push_str(strref),
+                    StringPiece::Str(string) => str.push_str(string)
+                }
             }
             str
         }
@@ -54,6 +113,11 @@ fn digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     take_while1(|c: char| c >= '0' && c <= '9')
 }
 
+
+fn power(lhs: f64, rhs: f64) -> f64 {
+    lhs.powf(rhs)
+}
+
 fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     c_hx_do! {
         __ <- char('.'),
@@ -62,24 +126,80 @@ fn trailing_digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     }
 }
 
+fn exponent_parser<'a>() -> impl Parser<&'a str, Output = f64> {
+    c_hx_do!{
+        __ <- satisfy(|c: char| c == 'e' || c == 'E'),
+        sign_char <- optional(satisfy(|c: char| c == '+' || c == '-')),
+        digits <- digit_sequence();
+        {
+            let sign = match sign_char {
+                Some('-') => -1.0,
+                _ => 1.0
+            };
+            let mut acc = 1.0;
+            for c in digits.chars() {
+                acc *= 10.0;
+                acc += (c as i64 - '0' as i64) as f64;
+            }
+            power(10.0, sign * acc)
+        }
+    }
+}
+
+#[derive(PartialEq, Copy, Clone)]
+enum NumberPrefix<'a >
+{
+    LeadingZero,
+    Digits(char, &'a str)
+}
+
+fn leading_zero_parser <'a>() -> impl Parser<&'a str, Output = NumberPrefix<'a >> {
+    char('0').map(|_| NumberPrefix::LeadingZero)
+}
+
+fn leading_digits_parser <'a>() -> impl Parser<&'a str, Output = NumberPrefix<'a >> {
+    c_hx_do! {
+        leading_digit <- satisfy(|c: char| c >= '1' && c <= '9'),
+        digs <- optional(digit_sequence());
+        NumberPrefix::Digits(leading_digit, digs.unwrap_or(""))
+    }
+}
+
+fn leading_parser <'a>() -> impl Parser<&'a str, Output = NumberPrefix<'a >> {
+    choice((
+        attempt(leading_digits_parser()),
+        attempt(leading_zero_parser()),
+    ))
+}
+
 fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     c_hx_do! {
         minus_sign <- optional(char('-')),
-        digs <- digit_sequence(),
-        trail <- optional(trailing_digit_sequence());
+        leading <- leading_parser(),
+        trail <- optional(trailing_digit_sequence()),
+        exp <- optional(exponent_parser());
         {
             Node::Number({
-                let mut acc = 0.0;
-                for c in digs.chars() {
-                    acc *= 10.0;
-                    acc += (c as i64 - '0' as i64) as f64;
-                }
+                let mut acc = match leading {
+                    NumberPrefix::LeadingZero => 0.0,
+                    NumberPrefix::Digits(leading_digit, l_digs) => {
+                        let mut l = (leading_digit as i64 - '0' as i64) as f64;
+                        for c in l_digs.chars() {
+                            l *= 10.0;
+                            l += (c as i64 - '0' as i64) as f64;
+                        }
+                        l
+                    }
+                };
                 if let Some(t_digs) = trail {
                     let mut divider = 1.0;
                     for c in t_digs.chars() {
                         divider /= 10.0;
                         acc += (c as i64 - '0' as i64) as f64 * divider;
                     }
+                }
+                if let Some(exponent) = exp {
+                    acc *= exponent;
                 }
                 if let Some(_) = minus_sign {
                     -acc

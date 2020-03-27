@@ -15,7 +15,7 @@ mod tests {
         include!("fail10.json"),
         include!("fail11.json"),
         include!("fail12.json"),
-        include!("fail13.json"), // <- TODO: make it fail
+        include!("fail13.json"),
         include!("fail14.json"),
         include!("fail15.json"),
         include!("fail16.json"),
@@ -27,7 +27,7 @@ mod tests {
         include!("fail22.json"),
         include!("fail23.json"),
         include!("fail24.json"),
-        include!("fail25.json"), // <- TODO: make it fail
+        include!("fail25.json"),
         include!("fail26.json"),
         include!("fail27.json"),
         include!("fail28.json"),
@@ -39,7 +39,7 @@ mod tests {
     ];
 
     const PASSES: [&'static str; 3] = [
-        include!("pass01.json"), // <- TODO: make it pass
+        include!("pass01.json"),
         include!("pass02.json"),
         include!("pass03.json")
     ];
@@ -47,6 +47,7 @@ mod tests {
     #[test]
     fn json_cpp_fails() {
         //assert!(parse_json(FAILS[0]).is_err());
+        //^^^ arguable case
         assert!(parse_json(FAILS[1]).is_err());
         assert!(parse_json(FAILS[2]).is_err());
         assert!(parse_json(FAILS[3]).is_err());
@@ -64,6 +65,7 @@ mod tests {
         assert!(parse_json(FAILS[15]).is_err());
         assert!(parse_json(FAILS[16]).is_err());
         //assert!(parse_json(FAILS[17]).is_err());
+        //^^^ arguable case
         assert!(parse_json(FAILS[18]).is_err());
         assert!(parse_json(FAILS[19]).is_err());
         assert!(parse_json(FAILS[20]).is_err());

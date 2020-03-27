@@ -10,7 +10,7 @@ mod tests {
         assert_eq!(Node::String("lol".to_string()), x.unwrap());
 
         let x = parse_json("\"lol, \\\"it's nested\\\"\"");
-        assert_eq!(Ok(Node::String("lol, \\\"it's nested\\\"".to_string())), x);
+        assert_eq!(Ok(Node::String("lol, \"it's nested\"".to_string())), x);
 
         let s = String::from(r#""who let the dogs out?""#);
         assert_eq!(Node::String("who let the dogs out?".to_string()), parse_json(&s).unwrap());
