@@ -60,6 +60,19 @@ enum StringPiece<'a >
     Str(String)
 }
 
+fn braced_parser<'a, PBL, P, PBR, O>(pbl: PBL, p: P, pbr: PBR) -> impl Parser<&'a str, Output = O>
+    where
+        PBL: Parser<&'a str>,
+        PBR: Parser<&'a str>,
+        P: Parser<&'a str, Output = O>
+{
+    between(
+        c_compre![c; c <- pbl, __ <- skip_many(space())],
+        c_compre![c; __ <- skip_many(space()), c <- pbr],
+        p
+    )
+}
+
 fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
     many(
         choice(
@@ -82,9 +95,7 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
 
 fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
     c_hx_do! {
-        __ <- char('"'),
-        x  <- string_part(),
-        ___ <- char('"');
+        x <- between(char('"'), char('"'), string_part());
         {
             let cap = x.iter().fold(0, |acc, s|
                 acc +
@@ -112,7 +123,6 @@ fn string_parser<'a>() -> impl Parser<&'a str, Output = Node> {
 fn digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     take_while1(|c: char| c >= '0' && c <= '9')
 }
-
 
 fn power(lhs: f64, rhs: f64) -> f64 {
     lhs.powf(rhs)
@@ -251,19 +261,6 @@ fn primitive_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         ___ <- skip_many(space());
         pars
     }
-}
-
-fn braced_parser<'a, PBL, P, PBR, O>(pbl: PBL, p: P, pbr: PBR) -> impl Parser<&'a str, Output = O>
-    where
-        PBL: Parser<&'a str>,
-        PBR: Parser<&'a str>,
-        P: Parser<&'a str, Output = O>
-{
-    between(
-        c_compre![c; c <- pbl, __ <- skip_many(space())],
-        c_compre![c; __ <- skip_many(space()), c <- pbr],
-        p
-    )
 }
 
 fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
