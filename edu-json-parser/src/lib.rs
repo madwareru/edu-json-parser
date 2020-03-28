@@ -42,13 +42,13 @@ fn unicode_char<'a>() -> impl Parser<&'a str, Output = String> {
         d1 <- parse_hex(),
         d0 <- parse_hex();
         {
-            let unicode: u32 = d0 +
-            10 * d1 +
-            100 * d2 +
-            1000 * d3;
+            let unicode = d0 +
+                10 * d1 +
+                100 * d2 +
+                1000 * d3;
             char::try_from(unicode)
-                .map(|c| c.to_string())
-                .unwrap_or(String::from(""))
+               .map(|c| c.to_string())
+               .unwrap_or(String::from(""))
         }
     }
 }
@@ -146,7 +146,7 @@ fn exponent_parser<'a>() -> impl Parser<&'a str, Output = f64> {
                 Some('-') => -1.0,
                 _ => 1.0
             };
-            let mut acc = 1.0;
+            let mut acc = 0.0;
             for c in digits.chars() {
                 acc *= 10.0;
                 acc += (c as i64 - '0' as i64) as f64;

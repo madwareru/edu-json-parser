@@ -6,6 +6,12 @@ mod tests {
 
     #[test]
     fn it_works() {
+        const EPSILON: f64 = 0.00001;
+
+        macro_rules! assert_eq_f64 {
+            ($lvalue:expr, $rvalue:expr) => { assert!(($lvalue - $rvalue).abs() < EPSILON) }
+        }
+
         let x = parse_json("\"lol\"");
         assert_eq!(Node::String("lol".to_string()), x.unwrap());
 
@@ -19,13 +25,22 @@ mod tests {
         assert_eq!(Node::String("".to_string()), parse_json(&s).unwrap());
 
         let z = String::from("123");
-        assert_eq!(Node::Number(123.0), parse_json(&z).unwrap());
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.0);
 
         let z = String::from("123.767");
-        assert_eq!(Node::Number(123.76700000000001), parse_json(&z).unwrap());
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.767);
+
+        let z = String::from("1.23767E+2");
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.767);
+
+        let z = String::from("1.23767E2");
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.767);
+
+        let z = String::from("1237.67e-1");
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.767);
 
         let z = String::from("-123.767");
-        assert_eq!(Node::Number(-123.76700000000001), parse_json(&z).unwrap());
+        assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), -123.767);
 
         let z = String::from("123.767f");
         assert!(parse_json(&z).is_err());

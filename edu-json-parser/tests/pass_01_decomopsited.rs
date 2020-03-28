@@ -82,4 +82,10 @@ mod tests {
 
     #[test]
     fn test_on_twitter() { assert!(parse_json(include!("twitter.json")).is_ok()); }
+
+    #[test]
+    fn test_on_canada() { assert!(parse_json(include!("canada.json")).is_ok()); }
+
+    #[test]
+    fn test_on_citm_catatlog() { assert!(parse_json(include!("citm_catalog.json")).is_ok()); }
 }
