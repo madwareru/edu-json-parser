@@ -11,4 +11,4 @@ It has a simple benchmark to compare with such libraries as `json` and `serde_js
 
 You could run it with a command `cargo bench`
 
-At this moment is slower around 5 and 2.5 times than each other respectively
+At this moment `edu-json-parser` is slower around 5 and 2.5 times than `json` and `serde_json` respectively
