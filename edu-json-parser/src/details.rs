@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use crate::errors::ErrorCause;
 use crate::errors::ErrorCause::*;
 use std::ops::Index;
-use std::rc::Rc;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -11,8 +10,8 @@ pub enum Node
     Boolean(bool),
     Number(f64),
     String(String),
-    Array(Rc<Vec<Node>>),
-    Dictionary(Rc<HashMap<String, Node>>)
+    Array(Vec<Node>),
+    Dictionary(HashMap<String, Node>)
 }
 
 #[macro_export]
@@ -206,9 +205,9 @@ impl Node {
         }
     }
 
-    pub fn as_array(&self) -> Option<Rc<Vec<Node>>> {
+    pub fn as_array(&self) -> Option<&Vec<Node>> {
         if let Node::Array(v) = self {
-            Some(v.clone())
+            Some(&v)
         } else {
             None
         }
@@ -218,9 +217,9 @@ impl Node {
         self.as_array().map(|_| true).unwrap_or(false)
     }
 
-    pub fn as_dictionary(&self) -> Option<Rc<HashMap<String, Node>>> {
+    pub fn as_dictionary(&self) -> Option<&HashMap<String, Node>> {
         if let Node::Dictionary(d) = self {
-            Some(d.clone())
+            Some(d)
         } else {
             None
         }
@@ -265,7 +264,7 @@ impl Node {
         }
     }
 
-    pub fn get_string(&self, key: &str) -> Result<&String, ErrorCause> {
+    pub fn get_string(&self, key: &str) -> Result<&str, ErrorCause> {
         match self.get(key) {
             Err(e) => Err(e),
             Ok(node) => match node {

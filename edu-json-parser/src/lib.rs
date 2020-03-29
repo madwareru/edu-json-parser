@@ -15,8 +15,7 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
 pub use crate::traits::*;
-use std::f64;
-use std::rc::Rc;
+use std::{f64, mem};
 use std::convert::TryFrom;
 
 fn parse_hex<'a>() -> impl Parser<&'a str, Output = u32> {
@@ -34,7 +33,8 @@ fn parse_hex<'a>() -> impl Parser<&'a str, Output = u32> {
     )
 }
 
-fn unicode_char<'a>() -> impl Parser<&'a str, Output = String> {
+fn unicode_char<'a>() -> impl Parser<&'a str, Output = Option<char>> {
+
     c_hx_do!{
         __ <- string(r#"\u"#),
         d3 <- parse_hex(),
@@ -46,9 +46,7 @@ fn unicode_char<'a>() -> impl Parser<&'a str, Output = String> {
                 10 * d1 +
                 100 * d2 +
                 1000 * d3;
-            char::try_from(unicode)
-               .map(|c| c.to_string())
-               .unwrap_or(String::from(""))
+            char::try_from(unicode).ok()
         }
     }
 }
@@ -57,7 +55,7 @@ fn unicode_char<'a>() -> impl Parser<&'a str, Output = String> {
 enum StringPiece<'a >
 {
     Ref(&'a str),
-    Str(String)
+    Char(Option<char>)
 }
 
 fn braced_parser<'a, PBL, P, PBR, O>(pbl: PBL, p: P, pbr: PBR) -> impl Parser<&'a str, Output = O>
@@ -87,7 +85,7 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
                 attempt(string("\\r").map(|_|StringPiece::Ref("\r"))),
                 attempt(string("\\f").map(|_|StringPiece::Ref("\u{000c}"))),
                 attempt(string("\\b").map(|_|StringPiece::Ref("\u{0008}"))),
-                attempt(unicode_char().map(|s|StringPiece::Str(s))),
+                attempt(unicode_char().map(|s|StringPiece::Char(s))),
             )
         )
     )
@@ -101,14 +99,14 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
                 acc +
                 match s {
                     StringPiece::Ref(strref) => strref.len(),
-                    StringPiece::Str(string) => string.len()
+                    StringPiece::Char(c) => c.map(|_| 1).unwrap_or(0)
                 }
             );
             let mut str = String::with_capacity(cap);
             for s in x.iter() {
                 match s {
                     StringPiece::Ref(strref) => str.push_str(strref),
-                    StringPiece::Str(string) => str.push_str(string)
+                    StringPiece::Char(c) => if let Some(chr) = c { str.push(*chr); }
                 }
             }
             str
@@ -124,6 +122,7 @@ fn digit_sequence<'a>() -> impl Parser<&'a str, Output = &'a str> {
     take_while1(|c: char| c >= '0' && c <= '9')
 }
 
+#[inline(always)]
 fn power(lhs: f64, rhs: f64) -> f64 {
     lhs.powf(rhs)
 }
@@ -147,9 +146,9 @@ fn exponent_parser<'a>() -> impl Parser<&'a str, Output = f64> {
                 _ => 1.0
             };
             let mut acc = 0.0;
-            for c in digits.chars() {
+            for c in digits.bytes() {
                 acc *= 10.0;
-                acc += (c as i64 - '0' as i64) as f64;
+                acc += (c - b'0') as f64;
             }
             power(10.0, sign * acc)
         }
@@ -193,19 +192,19 @@ fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
                 let mut acc = match leading {
                     NumberPrefix::LeadingZero => 0.0,
                     NumberPrefix::Digits(leading_digit, l_digs) => {
-                        let mut l = (leading_digit as i64 - '0' as i64) as f64;
-                        for c in l_digs.chars() {
+                        let mut l = (leading_digit as u8 - b'0') as f64;
+                        for c in l_digs.bytes() {
                             l *= 10.0;
-                            l += (c as i64 - '0' as i64) as f64;
+                            l += (c - b'0') as f64;
                         }
                         l
                     }
                 };
                 if let Some(t_digs) = trail {
                     let mut divider = 1.0;
-                    for c in t_digs.chars() {
+                    for c in t_digs.bytes() {
                         divider /= 10.0;
-                        acc += (c as i64 - '0' as i64) as f64 * divider;
+                        acc += (c - b'0') as f64 * divider;
                     }
                 }
                 if let Some(exponent) = exp {
@@ -269,11 +268,11 @@ fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         sep_by(primitive_parser(), char(',')),
         char(']')
     ).map(|nodes: Vec<Node>|
-        Node::Array(Rc::from(nodes))
+        Node::Array(nodes)
     )
 }
 
-fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Node)> {
+fn pair_parser<'a>() -> impl Parser<&'a str, Output = Option<(String, Node)>> {
     let str_parser = c_hx_do!{
         __ <- skip_many(space()),
         stp <- string_parser_inner(),
@@ -285,7 +284,7 @@ fn pair_parser<'a>() -> impl Parser<&'a str, Output = (String, Node)> {
         l <- str_parser,
         __ <- char(':'),
         r <- primitive_parser();
-        (l, r)
+        Some((l, r))
     }
 }
 
@@ -294,14 +293,14 @@ fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         char('{'),
         sep_by(pair_parser(), char(',')),
         char('}')
-    ).map(|nodes: Vec<(String, Node)>| {
+    ).map(|mut nodes: Vec<Option<(String, Node)>>| {
         let mut dict = HashMap::with_capacity(nodes.len());
         for i in 0..nodes.len() {
-            let (l, r) = nodes[i].clone();
+            let (l, r) = mem::replace(&mut nodes[i], None).unwrap();
             dict.insert(l, r);
         }
         Node::Dictionary(
-            Rc::from(dict)
+            dict
         )
     })
 }

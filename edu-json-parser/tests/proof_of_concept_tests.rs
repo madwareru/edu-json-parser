@@ -2,7 +2,6 @@
 mod tests {
     use std::collections::HashMap;
     use edu_json_parser::{parse_json, Node};
-    use std::rc::Rc;
 
     #[test]
     fn it_works() {
@@ -64,26 +63,26 @@ mod tests {
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
             Ok(Node::Array(
-                Rc::new(vec![
+                vec![
                     Node::Number(1.0),
                     Node::Array(
-                        Rc::new(vec![
+                        vec![
                             Node::Number(1.0),
                             Node::Boolean(false),
                             Node::String("say".to_string()),
-                        ])
+                        ]
                     ),
                     Node::String("say".to_string()),
-                ])
+                ]
             )),
             parse_json(&z));
 
         let z = String::from("null");
         assert_eq!(Ok(Node::Null), parse_json(&z));
         let z = String::from("[]");
-        assert_eq!(Ok(Node::Array(Rc::new(vec![]))), parse_json(&z));
+        assert_eq!(Ok(Node::Array(vec![])), parse_json(&z));
         let z = String::from("{}");
-        assert_eq!(Ok(Node::Dictionary(Rc::new(HashMap::new()))), parse_json(&z));
+        assert_eq!(Ok(Node::Dictionary(HashMap::new())), parse_json(&z));
         let z = String::from("{}abra");
         assert!(if let Err(_) = parse_json(&z){ true } else { false });
     }
