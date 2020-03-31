@@ -231,12 +231,9 @@ impl Node {
 
     pub fn len(&self) -> usize {
         match self {
-            Node::Null => None,
-            Node::Boolean(_) => None,
-            Node::Number(_) => None,
-            Node::String(_) => None,
             Node::Array(v) => Some(v.len()),
             Node::Dictionary(d) => Some(d.len()),
+            _ => None
         }.expect("it appears that node is not array or dictionary so it has no len!")
     }
 
