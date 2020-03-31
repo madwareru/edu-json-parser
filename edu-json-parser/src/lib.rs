@@ -99,7 +99,7 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
                 acc +
                 match s {
                     StringPiece::Ref(strref) => strref.len(),
-                    StringPiece::Char(c) => c.map(|_| 1).unwrap_or(0)
+                    StringPiece::Char(c) => c.map(|c_inner| c_inner.len_utf8()).unwrap_or(0)
                 }
             );
             let mut str = String::with_capacity(cap);
