@@ -145,12 +145,11 @@ fn exponent_parser<'a>() -> impl Parser<&'a str, Output = f64> {
                 Some('-') => -1.0,
                 _ => 1.0
             };
-            let mut acc = 0.0;
-            for c in digits.bytes() {
-                acc *= 10.0;
-                acc += (c - b'0') as f64;
+            let mut acc = 0;
+            for c in digits.as_bytes() {
+                acc = acc * 10 + (c - b'0') as u64;
             }
-            power(10.0, sign * acc)
+            power(10.0, sign * acc as f64)
         }
     }
 }
@@ -192,19 +191,18 @@ fn number_parser<'a>() -> impl Parser<&'a str, Output = Node> {
                 let mut acc = match leading {
                     NumberPrefix::LeadingZero => 0.0,
                     NumberPrefix::Digits(leading_digit, l_digs) => {
-                        let mut l = (leading_digit as u8 - b'0') as f64;
-                        for c in l_digs.bytes() {
-                            l *= 10.0;
-                            l += (c - b'0') as f64;
+                        let mut l = (leading_digit as u8 - b'0') as u64;
+                        for c in l_digs.as_bytes() {
+                            l =  l * 10 + (c  - b'0') as u64;
                         }
-                        l
+                        l as f64
                     }
                 };
                 if let Some(t_digs) = trail {
                     let mut divider = 1.0;
-                    for c in t_digs.bytes() {
+                    for c in t_digs.as_bytes() {
                         divider /= 10.0;
-                        acc += (c - b'0') as f64 * divider;
+                        acc += (c  - b'0') as f64 * divider;
                     }
                 }
                 if let Some(exponent) = exp {

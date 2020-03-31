@@ -10,14 +10,18 @@ edition = "2018"
 bench = false
 
 [dependencies]
-json = "0.12.4"
-serde_json = "1.0.48"
 combine = "4.0.1"
 compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.4" }
 
 [dev-dependencies]
 criterion = "0.3"
+json = "0.12.4"
+serde_json = "1.0.48"
 
 [[bench]]
-name = "test_bench"
+name = "comparison_bench"
+harness = false
+
+[[bench]]
+name = "number_parsing_bench"
 harness = false
