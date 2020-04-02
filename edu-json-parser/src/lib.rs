@@ -5,6 +5,7 @@ extern crate combine;
 mod errors;
 mod details;
 mod traits;
+mod stop_watch;
 
 use std::collections::HashMap;
 use combine::{parser, eof, satisfy, choice, attempt};
