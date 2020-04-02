@@ -34,7 +34,6 @@ fn parse_hex<'a>() -> impl Parser<&'a str, Output = u32> {
 }
 
 fn unicode_char<'a>() -> impl Parser<&'a str, Output = Option<char>> {
-
     c_hx_do!{
         __ <- string(r#"\u"#),
         d3 <- parse_hex(),
