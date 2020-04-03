@@ -104,7 +104,7 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = SmolStr> {
                 }
             );
             if cap <= 22 {
-                let mut buf: [u8; 22] = [0;22];
+                let mut buf: [u8; 22] = [0; 22];
                 let mut offset = 0;
                 for s in x.iter() {
                     match s {
@@ -123,9 +123,7 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = SmolStr> {
                     }
                 }
                 return unsafe {
-                    let str = str::from_utf8_unchecked(
-                        slice::from_raw_parts(buf.as_ptr(), cap)
-                    );
+                    let str = str::from_utf8_unchecked(&buf[0..cap]);
                     SmolStr::new(str)
                 };
             }
