@@ -10,6 +10,7 @@ edition = "2018"
 bench = false
 
 [dependencies]
+smol_str = "0.1.15"
 combine = "4.0.1"
 compre_combinee = { git = "https://github.com/madwareru/compre_combinee", version = "0.1.4" }
 

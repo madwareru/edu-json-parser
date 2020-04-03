@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::errors::ErrorCause;
 use crate::errors::ErrorCause::*;
 use std::ops::Index;
+use smol_str::SmolStr;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Node
@@ -9,9 +10,9 @@ pub enum Node
     Null,
     Boolean(bool),
     Number(f64),
-    String(String),
+    String(SmolStr),
     Array(Vec<Node>),
-    Dictionary(HashMap<String, Node>)
+    Dictionary(HashMap<SmolStr, Node>)
 }
 
 #[macro_export]
@@ -175,7 +176,7 @@ impl Node {
         }
     }
 
-    pub fn as_string(&self) -> Option<String> {
+    pub fn as_string(&self) -> Option<SmolStr> {
         match self {
             Node::String(s) => Some(s.clone()),
             _ => None
@@ -217,7 +218,7 @@ impl Node {
         self.as_array().map(|_| true).unwrap_or(false)
     }
 
-    pub fn as_dictionary(&self) -> Option<&HashMap<String, Node>> {
+    pub fn as_dictionary(&self) -> Option<&HashMap<SmolStr, Node>> {
         if let Node::Dictionary(d) = self {
             Some(d)
         } else {

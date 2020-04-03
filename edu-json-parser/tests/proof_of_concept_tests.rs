@@ -2,6 +2,7 @@
 mod tests {
     use std::collections::HashMap;
     use edu_json_parser::{parse_json, Node};
+    use smol_str::SmolStr;
 
     #[test]
     fn it_works() {
@@ -12,16 +13,16 @@ mod tests {
         }
 
         let x = parse_json("\"lol\"");
-        assert_eq!(Node::String("lol".to_string()), x.unwrap());
+        assert_eq!("lol", &x.unwrap().as_string().unwrap());
 
         let x = parse_json("\"lol, \\\"it's nested\\\"\"");
-        assert_eq!(Ok(Node::String("lol, \"it's nested\"".to_string())), x);
+        assert_eq!("lol, \"it's nested\"", x.unwrap().as_string().unwrap());
 
         let s = String::from(r#""who let the dogs out?""#);
-        assert_eq!(Node::String("who let the dogs out?".to_string()), parse_json(&s).unwrap());
+        assert_eq!("who let the dogs out?", parse_json(&s).unwrap().as_string().unwrap());
 
         let s = String::from(r#""""#);
-        assert_eq!(Node::String("".to_string()), parse_json(&s).unwrap());
+        assert_eq!("", parse_json(&s).unwrap().as_string().unwrap());
 
         let z = String::from("123");
         assert_eq_f64!(parse_json(&z).unwrap().as_number().unwrap(), 123.0);
@@ -58,7 +59,6 @@ mod tests {
         assert_eq!(Some(3), arr.as_array().map(|a| a.len()));
         assert_eq!(Ok(Node::Number(1.0)), arr.get_element_at(0));
         assert_eq!(Ok(Node::Boolean(false)), arr.get_element_at(1));
-        assert_eq!(Ok(Node::String("say".to_string())), arr.get_element_at(2));
 
         let z = String::from("[1, [1, false, \"say\"], \"say\"]");
         assert_eq!(
@@ -69,10 +69,10 @@ mod tests {
                         vec![
                             Node::Number(1.0),
                             Node::Boolean(false),
-                            Node::String("say".to_string()),
+                            Node::String(SmolStr::from("say")),
                         ]
                     ),
-                    Node::String("say".to_string()),
+                    Node::String(SmolStr::from("say")),
                 ]
             )),
             parse_json(&z));

@@ -16,8 +16,9 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
 pub use crate::traits::*;
-use std::{f64, mem};
+use std::{f64, mem, slice, str};
 use std::convert::TryFrom;
+use smol_str::SmolStr;
 
 fn parse_hex<'a>() -> impl Parser<&'a str, Output = u32> {
     satisfy(|c: char|
@@ -91,7 +92,7 @@ fn string_part<'a>() -> impl Parser<&'a str, Output = Vec<StringPiece<'a >>> {
     )
 }
 
-fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
+fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = SmolStr> {
     c_hx_do! {
         x <- between(char('"'), char('"'), string_part());
         {
@@ -102,6 +103,32 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
                     StringPiece::Char(c) => c.map(|c_inner| c_inner.len_utf8()).unwrap_or(0)
                 }
             );
+            if cap <= 22 {
+                let mut buf: [u8; 22] = [0;22];
+                let mut offset = 0;
+                for s in x.iter() {
+                    match s {
+                        StringPiece::Ref(strref) => {
+                            for &b in strref.as_bytes() {
+                                buf[offset] = b;
+                                offset += 1;
+                            }
+                        },
+                        StringPiece::Char(c) => {
+                            if let Some(chr) = c {
+                                chr.encode_utf8(&mut buf[offset..]);
+                                offset += chr.len_utf8();
+                            }
+                        }
+                    }
+                }
+                return unsafe {
+                    let str = str::from_utf8_unchecked(
+                        slice::from_raw_parts(buf.as_ptr(), cap)
+                    );
+                    SmolStr::new(str)
+                };
+            }
             let mut str = String::with_capacity(cap);
             for s in x.iter() {
                 match s {
@@ -109,7 +136,7 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = String> {
                     StringPiece::Char(c) => if let Some(chr) = c { str.push(*chr); }
                 }
             }
-            str
+            SmolStr::new(str)
         }
     }
 }
@@ -270,7 +297,7 @@ fn array_parser<'a>() -> impl Parser<&'a str, Output = Node> {
     )
 }
 
-fn pair_parser<'a>() -> impl Parser<&'a str, Output = Option<(String, Node)>> {
+fn pair_parser<'a>() -> impl Parser<&'a str, Output = Option<(SmolStr, Node)>> {
     let str_parser = c_hx_do!{
         __ <- skip_many(space()),
         stp <- string_parser_inner(),
@@ -291,7 +318,7 @@ fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         char('{'),
         sep_by(pair_parser(), char(',')),
         char('}')
-    ).map(|mut nodes: Vec<Option<(String, Node)>>| {
+    ).map(|mut nodes: Vec<Option<(SmolStr, Node)>>| {
         let mut dict = HashMap::with_capacity(nodes.len());
         for i in 0..nodes.len() {
             let (l, r) = mem::replace(&mut nodes[i], None).unwrap();
