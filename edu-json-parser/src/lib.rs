@@ -7,7 +7,7 @@ mod details;
 mod traits;
 mod stop_watch;
 
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use combine::{parser, eof, satisfy, choice, attempt};
 use combine::parser::range::{take_while1};
 use combine::parser::char::*;
@@ -16,7 +16,7 @@ use combine::{Parser, many, optional, skip_many, sep_by, between};
 pub use crate::errors::ErrorCause;
 pub use crate::details::Node;
 pub use crate::traits::*;
-use std::{f64, mem, slice, str};
+use std::{f64, mem, str};
 use std::convert::TryFrom;
 use smol_str::SmolStr;
 
@@ -316,10 +316,10 @@ fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
         char('{'),
         sep_by(pair_parser(), char(',')),
         char('}')
-    ).map(|mut nodes: Vec<Option<(SmolStr, Node)>>| {
-        let mut dict = HashMap::with_capacity(nodes.len());
-        for i in 0..nodes.len() {
-            let (l, r) = mem::replace(&mut nodes[i], None).unwrap();
+    ).map(|mut pairs: Vec<Option<(SmolStr, Node)>>| {
+        let mut dict = HashMap::with_capacity(pairs.len());
+        for mut pair in pairs {
+            let (l, r) = mem::replace(&mut pair, None).unwrap();
             dict.insert(l, r);
         }
         Node::Dictionary(
