@@ -322,7 +322,7 @@ fn dictionary_parser<'a>() -> impl Parser<&'a str, Output = Node> {
             let (l, r) = mem::replace(&mut pair, None).unwrap();
             dict.insert(l, r);
         }
-        Node::Dictionary(
+        Node::Object(
             dict
         )
     })

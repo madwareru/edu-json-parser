@@ -30,7 +30,7 @@ impl Display for CardData {
 
 impl Parsable for CardData {
     fn parse_node(json: &Node) -> Result<Self, String> {
-        if !json.is_dictionary() {
+        if !json.is_object() {
             return Err("Node is not a dictionary".to_string());
         }
         match parse_many!(json =>

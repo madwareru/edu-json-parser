@@ -12,7 +12,7 @@ pub enum Node
     Number(f64),
     String(SmolStr),
     Array(Vec<Node>),
-    Dictionary(HashMap<SmolStr, Node>)
+    Object(HashMap<SmolStr, Node>)
 }
 
 #[macro_export]
@@ -218,22 +218,22 @@ impl Node {
         self.as_array().map(|_| true).unwrap_or(false)
     }
 
-    pub fn as_dictionary(&self) -> Option<&HashMap<SmolStr, Node>> {
-        if let Node::Dictionary(d) = self {
+    pub fn as_object(&self) -> Option<&HashMap<SmolStr, Node>> {
+        if let Node::Object(d) = self {
             Some(d)
         } else {
             None
         }
     }
 
-    pub fn is_dictionary(&self) -> bool {
-        self.as_dictionary().map(|_| true).unwrap_or(false)
+    pub fn is_object(&self) -> bool {
+        self.as_object().map(|_| true).unwrap_or(false)
     }
 
     pub fn len(&self) -> usize {
         match self {
             Node::Array(v) => Some(v.len()),
-            Node::Dictionary(d) => Some(d.len()),
+            Node::Object(d) => Some(d.len()),
             _ => None
         }.expect("it appears that node is not array or dictionary so it has no len!")
     }
@@ -252,7 +252,7 @@ impl Node {
 
     pub fn get(&self, key: &str) -> Result<&Node, ErrorCause> {
         match self {
-            Node::Dictionary(d) => {
+            Node::Object(d) => {
                 match d.get(key) {
                     None => Err(FieldNotExist(key.to_string())),
                     Some(x) => Ok(x)
@@ -308,7 +308,7 @@ impl Index<&str> for Node
     type Output = Node;
     fn index(&self, key: &str) -> &Self::Output {
         match self {
-            Node::Dictionary(d) => {
+            Node::Object(d) => {
                 &d[key]
             },
             _ => panic!("fail")

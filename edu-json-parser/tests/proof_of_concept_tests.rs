@@ -82,7 +82,7 @@ mod tests {
         let z = String::from("[]");
         assert_eq!(Ok(Node::Array(vec![])), parse_json(&z));
         let z = String::from("{}");
-        assert_eq!(Ok(Node::Dictionary(HashMap::new())), parse_json(&z));
+        assert_eq!(Ok(Node::Object(HashMap::new())), parse_json(&z));
         let z = String::from("{}abra");
         assert!(if let Err(_) = parse_json(&z){ true } else { false });
     }
