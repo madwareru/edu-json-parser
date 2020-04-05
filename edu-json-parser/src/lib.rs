@@ -123,8 +123,7 @@ fn string_parser_inner<'a>() -> impl Parser<&'a str, Output = SmolStr> {
                     }
                 }
                 return unsafe {
-                    let str = str::from_utf8_unchecked(&buf[0..cap]);
-                    SmolStr::new(str)
+                    SmolStr::new(str::from_utf8_unchecked(&buf[0..cap]))
                 };
             }
             let mut str = String::with_capacity(cap);
