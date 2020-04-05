@@ -169,7 +169,7 @@ impl Node {
     }
 
     pub fn is_number(&self) -> bool {
-        if let Node::String(_) = self {
+        if let Node::Number(_) = self {
             true
         } else {
             false

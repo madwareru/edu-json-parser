@@ -44,9 +44,9 @@ fn unicode_char<'a>() -> impl Parser<&'a str, Output = Option<char>> {
         d0 <- parse_hex();
         {
             let unicode = d0 +
-                10 * d1 +
-                100 * d2 +
-                1000 * d3;
+                0x10 * d1 +
+                0x100 * d2 +
+                0x1000 * d3;
             char::try_from(unicode).ok()
         }
     }
