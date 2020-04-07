@@ -12,7 +12,10 @@ impl StopWatch {
             time_started: Instant::now()
         }
     }
-    pub fn report(&mut self) {
+}
+
+impl Drop for StopWatch {
+    fn drop(&mut self) {
         println!("\"{}\"\t{}", self.associated_name, self.time_started.elapsed().as_nanos());
     }
 }
